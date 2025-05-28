@@ -79,6 +79,7 @@ function wetter_action_handler($action) {
     $actions = array(
         "overview"     => array("active" => "overview",     "file" => "overview.php"),
         "entry"        => array("active" => "entry",        "file" => "wetter_entry.php"),
+	"edit"         => array("active" => "edit",         "file" => "wetter_edit.php"), // Neue Aktion
         "archive"      => array("active" => "archive",      "file" => "wetter_archive.php"),
         "archive_view" => array("active" => "archive_view", "file" => "wetter_archive_view.php"),
         "settings"     => array("active" => "settings",     "file" => "settings.php"),
