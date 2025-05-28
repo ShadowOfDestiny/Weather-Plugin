@@ -61,7 +61,6 @@ function wetter_meta() {
     $sub_menu['10'] = array( "id" => "overview", "title" => $lang->wetter_admin_overview_title, "link"  => "index.php?module=wetter-overview" );
     $sub_menu['20'] = array( "id" => "cities", "title" => $lang->wetter_admin_manage_cities_title, "link" => "index.php?module=wetter-cities" );
     $sub_menu['30'] = array( "id" => "entry", "title" => $lang->wetter_admin_entry_title, "link" => "index.php?module=wetter-entry" );
-	$sub_menu['40'] = array( "id" => "edit", "title" => $lang->wetter_admin_edit_entry_title, "link" => "index.php?module=wetter_edit.php"); // Neue Aktion
     $sub_menu['50'] = array( "id" => "archive", "title" => $lang->wetter_admin_manage_archive_title, "link" => "index.php?module=wetter-archive" );
     $sub_menu['60'] = array( "id" => "archive_view", "title" => $lang->wetter_admin_view_archive_title, "link" => "index.php?module=wetter-archive_view" );
     $sub_menu['70'] = array( "id" => "settings", "title" => $lang->wetter_admin_settings_title, "link" => "index.php?module=wetter-settings" );
@@ -80,7 +79,6 @@ function wetter_action_handler($action) {
     $actions = array(
         "overview"     => array("active" => "overview",     "file" => "overview.php"),
         "entry"        => array("active" => "entry",        "file" => "wetter_entry.php"),
-		"edit"         => array("active" => "edit",         "file" => "wetter_edit.php"), // Neue Aktion
         "archive"      => array("active" => "archive",      "file" => "wetter_archive.php"),
         "archive_view" => array("active" => "archive_view", "file" => "wetter_archive_view.php"),
         "settings"     => array("active" => "settings",     "file" => "settings.php"),
