@@ -152,9 +152,8 @@ echo $form_add->output_submit_wrapper($buttons_add);
 
 // Tabelle der existierenden Städte
 $table = new Table;
-$table->construct_header($lang->wetter_admin_existing_cities, array("colspan" => 2));
-$table->construct_header($lang->wetter_admin_city_name_column);
-$table->construct_header($lang->wetter_admin_actions_column, array("class" => "align_center", "width" => "150"));
+$table->construct_header($lang->wetter_admin_existing_cities);
+$table->construct_header($lang->wetter_admin_actions_column, array("class" => "align_center", "width" => "150px"));
 
 $configured_cities_str = $mybb->settings['wetter_plugin_cities'];
 $cities_array_display = array_filter(array_map('trim', explode(",", $configured_cities_str)));
