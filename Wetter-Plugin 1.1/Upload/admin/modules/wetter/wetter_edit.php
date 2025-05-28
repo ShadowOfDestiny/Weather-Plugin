@@ -209,7 +209,7 @@ $form_container->output_row($lang->wetter_admin_windspeed, "", $form->generate_t
 echo $form_container->end();
 
 $buttons = array();
-$buttons = $form->generate_submit_button($lang->wetter_admin_update_entry_button, array("name" => "submit_wetter_entry"));
+$buttons[] = $form->generate_submit_button($lang->wetter_admin_update_entry_button, array("name" => "submit_wetter_entry"));
 echo $form->output_submit_wrapper($buttons);
 echo "</form>";
 
