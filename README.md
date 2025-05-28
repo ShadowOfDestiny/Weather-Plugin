@@ -11,7 +11,7 @@ Für Wünsche bin ich gerne offen und ich freue mich darauf, wenn es genutzt wir
 
 
 Hier eine Übersicht über das Admin-Modul. Es ist leicht zu bedienen und eigentlich selbsterklärend.
-<img src="https://shadow.or.at/images/forum/1.übersicht.png">
+https://shadow.or.at/images/forum/1.übersicht.png
 
 Hier trägt man die Stadt / die Städte ein und dadurch werden in der DB Einträge für die Stadt erstellt.
 https://shadow.or.at/images/forum/2.stadtverwaltung.png
