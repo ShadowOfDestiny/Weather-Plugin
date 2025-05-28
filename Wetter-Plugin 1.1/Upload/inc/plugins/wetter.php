@@ -112,14 +112,13 @@ function wetter_install() {
             "optionscode" => "text",
             "value"       => "",     // Standard: Leer, Staedte werden im ACP hinzugefügt
             "disporder"   => 4
-        )
+        ),
             "wetter_plugin_version" => array( // Hier die Versionseinstellung integriert
             "title"       => "Wetter Plugin Version (intern)",
             "description" => "Speichert die aktuell installierte Version des Wetter Plugins. Nicht manuell ändern.",
             "optionscode" => "text",
             "value"       => $db->escape_string($current_plugin_version), // Setzt den Wert auf "1.1"
             "disporder"   => 99,
-            "visibility"  => 0
         )
     );
 
@@ -299,7 +298,7 @@ function wetter_uninstall() {
 
     // 1. Dynamisch erstellte Stadttabellen löschen
     // Diese Logik sollte aus deiner cities.php adaptiert werden
-    if (isset($mybb->settings['wetter_plugin_cities'])) {
+   if (isset($mybb->settings['wetter_plugin_cities'])) {
         $cities_array = wetter_helper_get_cities_array_from_string($mybb->settings['wetter_plugin_cities']);
         if (!empty($cities_array)) {
             foreach ($cities_array as $city_name) {
@@ -375,7 +374,6 @@ function wetter_upgrade() {
                         "optionscode" => "text",
                         "value"       => "1.0", // Setze es initial auf eine Version vor 1.1, wird am Ende auf 1.1 aktualisiert
                         "disporder"   => 99,
-                        "visibility"  => 0,
                         "gid"         => (int)$setting_group_data['gid']
                     );
                     $db->insert_query("settings", $version_setting_data);
