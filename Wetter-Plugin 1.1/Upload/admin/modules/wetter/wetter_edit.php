@@ -101,17 +101,13 @@ if ($mybb->request_method == "post" && $mybb->get_input('submit_wetter_entry')) 
         $errors = $lang->wetter_admin_error_invalid_date;
     }
     if (empty($updated_data['icon']) || $updated_data['icon'] == 'wi-na') {
-        $errors = $lang->wetter_admin_error_no_icon_selected;
+        $errors[] = $lang->wetter_admin_error_no_icon_selected;
     }
-    if(!empty($updated_data['sonnenaufgang']) && $updated_data['sonnenaufgang']!= '00:00' &&!preg_match("/^(?:\d|2[0-3]):[0-5]\d$/", $updated_data['sonnenaufgang'])) {
-        $errors = $lang->wetter_admin_error_invalid_time_sunrise;
-    } else if (empty($updated_data['sonnenaufgang'])) {
-        $updated_data['sonnenaufgang'] = NULL; // Korrekt für DB
+    if(!empty($sonnenaufgang) && !preg_match("/^(?:[01]\d|2[0-3]):[0-5]\d$/", $sonnenaufgang)) {
+        $errors[] = $lang->wetter_admin_error_invalid_time_sunrise; // Neue Sprachvariable! z.B. "Ungültiges Zeitformat für Sonnenaufgang (erwartet HH:MM)."
     }
-    if(!empty($updated_data['sonnenuntergang']) && $updated_data['sonnenuntergang']!= '00:00' &&!preg_match("/^(?:\d|2[0-3]):[0-5]\d$/", $updated_data['sonnenuntergang'])) {
-        $errors = $lang->wetter_admin_error_invalid_time_sunset;
-    } else if (empty($updated_data['sonnenuntergang'])) {
-        $updated_data['sonnenuntergang'] = NULL; // Korrekt für DB
+    if(!empty($sonnenuntergang) && !preg_match("/^(?:[01]\d|2[0-3]):[0-5]\d$/", $sonnenuntergang)) {
+        $errors[] = $lang->wetter_admin_error_invalid_time_sunset; // Neue Sprachvariable! z.B. "Ungültiges Zeitformat für Sonnenuntergang (erwartet HH:MM)."
     }
      // Temperatur sollte numerisch sein (ggf. mit Komma/Punkt für Dezimalstellen)
     if (!is_numeric(str_replace(',', '.', $updated_data['temperatur']))) {
@@ -181,15 +177,23 @@ $form_container->output_row($lang->wetter_admin_temperature." <em>*</em>", "", $
 $current_wetterlage_value =!empty($mybb->input['wetterlage'])? htmlspecialchars_uni($mybb->input['wetterlage']) : htmlspecialchars_uni($entry_data['wetterlage']);
 $form_container->output_row($lang->wetter_admin_condition." <em>*</em>", "", $form->generate_text_box('wetterlage', $current_wetterlage_value, array('id' => 'wetterlage')), 'wetterlage');
 
-// Sonnenaufgang
-$current_sunrise_value =!empty($mybb->input['sonnenaufgang'])? htmlspecialchars_uni($mybb->input['sonnenaufgang']) : (!empty($entry_data['sonnenaufgang'])? htmlspecialchars_uni(substr($entry_data['sonnenaufgang'], 0, 5)) : '');
-$sonnenaufgang_html = '<input type="time" name="sonnenaufgang" id="sonnenaufgang" value="'. $current_sunrise_value. '" step="60" />';
-$form_container->output_row($lang->wetter_admin_sunrise, $lang->wetter_admin_time_desc, $sonnenaufgang_html, 'sonnenaufgang');
+// Sonnenaufgang (HH:MM)
+$sonnenaufgang_html = '<input type="time" name="sonnenaufgang" id="sonnenaufgang" value="' . htmlspecialchars($mybb->input['sonnenaufgang'] ?? ($entry_data['sonnenaufgang'] ?? '')) . '" step="60" />';
+$form_container->output_row(
+    $lang->wetter_admin_sunrise, 
+    $lang->wetter_admin_time_desc, // z.B. "Format: HH:MM"
+    $sonnenaufgang_html,
+    'sonnenaufgang' // Label 'for' Attribut
+);
 
-// Sonnenuntergang
-$current_sunset_value =!empty($mybb->input['sonnenuntergang'])? htmlspecialchars_uni($mybb->input['sonnenuntergang']) : (!empty($entry_data['sonnenuntergang'])? htmlspecialchars_uni(substr($entry_data['sonnenuntergang'], 0, 5)) : '');
-$sonnenuntergang_html = '<input type="time" name="sonnenuntergang" id="sonnenuntergang" value="'. $current_sunset_value. '" step="60" />';
-$form_container->output_row($lang->wetter_admin_sunset, $lang->wetter_admin_time_desc, $sonnenuntergang_html, 'sonnenuntergang');
+// Sonnenuntergang (HH:MM)
+$sonnenuntergang_html = '<input type="time" name="sonnenuntergang" id="sonnenuntergang" value="' . htmlspecialchars($mybb->input['sonnenuntergang'] ?? ($entry_data['sonnenuntergang'] ?? '')) . '" step="60" />';
+$form_container->output_row(
+    $lang->wetter_admin_sunset, 
+    $lang->wetter_admin_time_desc, 
+    $sonnenuntergang_html,
+    'sonnenuntergang'
+);
 
 // Mondphase
 $current_moonphase_value =!empty($mybb->input['mondphase'])? htmlspecialchars_uni($mybb->input['mondphase']) : htmlspecialchars_uni($entry_data['mondphase']);
