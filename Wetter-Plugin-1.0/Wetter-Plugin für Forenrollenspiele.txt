@@ -1,6 +1,0 @@
-Mit diesem Plugin kann man Wetterdaten für Forenrollenspiele erstellen. Ob fiktive Städte oder reale Städte, nach historischen Daten oder nach erfundenen Daten ist völlig gleichgültig.
-Das Plugin liefert ein ACP Modul mit, über den alle Einstellungen laufen und falls Fragen sind, könnt ihr mich gerne über Discord Dani1979#9863 oder auf meinem Forum: https://shadow.or.at kontaktieren.
-
-Ich werde bestimmt weiter an den Dateien arbeiten, aber fürs erste reicht es, wenn man alle Daten eingeben kann und sie auch editieren kann.
-
-Für Wünsche bin ich gerne offen und ich freue mich darauf, wenn es genutzt wird. Wenn nicht, dann ist es nur für mich. ^^
