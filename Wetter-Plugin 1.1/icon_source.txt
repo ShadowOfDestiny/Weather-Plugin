@@ -1,0 +1,14 @@
+Quelle der Wetter-Icons:
+
+Die in diesem Plugin verwendeten Wetter-Icons stammen von "Weather Icons".
+
+Offizielle Webseite und Quelle:
+https://erikflowers.github.io/weather-icons/
+
+Lizenzinformationen:
+
+    Icons: SIL OFL 1.1
+    Code (LESS/Sass/CSS): MIT License
+    Dokumentation: CC BY 3.0
+
+Es wird empfohlen, die Lizenzbedingungen auf der Webseite des Anbieters für detaillierte Informationen zur Nutzung und Attribution zu konsultieren.
