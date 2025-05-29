@@ -1,5 +1,6 @@
 <?php
-// admin/modules/wetter/wetter_entry.php
+// Ggf. den Pfad anpassen, stelle sicher, dass das Verzeichnis schreibbar ist
+ini_set('error_log', MYBB_ROOT . 'logs/php_acp_error.log'); // MYBB_ROOT.'logs/...' ist oft besser
 
 if (!defined("IN_MYBB") || !defined("IN_ADMINCP")) {
     die("Direkter Zugriff nicht erlaubt.");
@@ -123,20 +124,23 @@ if (empty($cities)) {
 }
 
 // Datum
+$current_date_value_raw = $mybb->input['datum'] ?? date("Y-m-d");
+$current_date_value = htmlspecialchars($current_date_value_raw); // Escapen für das value-Attribut
+
+// Datum
 $datum_html = '<input type="date" name="datum" id="datum" value="' . $current_date_value . '" style="width: auto; padding: 5px;" />';
-// Optional: Füge JavaScript für einen Fallback-Datepicker hinzu, falls der Browser type="date" nicht unterstützt,
-// aber moderne Browser tun das eigentlich alle.
 
 $form_container->output_row(
     $lang->wetter_admin_date." <em>*</em>",
     $lang->wetter_admin_date_desc,
-    $datum_html, // Hier dein benutzerdefiniertes HTML einfügen
+    $datum_html,
     'datum'
 );
 
 // Zeitspanne
 $timeslot_options = array("00-06" => "00:00 - 06:00", "06-12" => "06:00 - 12:00", "12-18" => "12:00 - 18:00", "18-24" => "18:00 - 24:00 Uhr");
-$form_container->output_row($lang->wetter_admin_timeslot." <em>*</em>", "", $form->generate_select_box('zeitspanne', $timeslot_options, $mybb->input['zeitspanne']), 'zeitspanne');
+$selected_zeitspanne = $mybb->input['zeitspanne'] ?? ''; // Oder einen sinnvollen Standard-Key aus $timeslot_options
+$form_container->output_row($lang->wetter_admin_timeslot." <em>*</em>", "", $form->generate_select_box('zeitspanne', $timeslot_options, $selected_zeitspanne), 'zeitspanne');
 
 // --- ICON PICKER (in wetter_entry.php) ---
 // Stelle sicher, dass $mybb, $form, $form_container und $lang hier verfügbar sind.
@@ -205,7 +209,8 @@ $form_container->output_row($lang->wetter_admin_moonphase, "", $form->generate_t
 
 // --- WINDRICHTUNG DROPDOWN ---
 $wind_directions = wetter_get_wind_directions(); // Helferfunktion muss hier verfügbar sein
-$form_container->output_row($lang->wetter_admin_winddirection, "", $form->generate_select_box('windrichtung', $wind_directions, $mybb->input['windrichtung']), 'windrichtung');
+$selected_windrichtung = $mybb->input['windrichtung'] ?? ''; // Standard auf Leerstring oder ersten Wert der $wind_directions
+$form_container->output_row($lang->wetter_admin_winddirection, "", $form->generate_select_box('windrichtung', $wind_directions, $selected_windrichtung), 'windrichtung');
 // --- ENDE WINDRICHTUNG DROPDOWN ---
 
 // Windstärke
