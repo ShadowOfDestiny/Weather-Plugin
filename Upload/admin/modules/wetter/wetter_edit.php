@@ -17,11 +17,6 @@ if (!function_exists('wetter_sanitize_city_name_for_table')) {
         die("Wichtige Plugin-Datei wetter.php nicht gefunden.");
     }
 }
-if (is_object($page) && property_exists($page, 'extra_header')) {
-    $css_file_name = 'weather-icons.min.css';
-    $css_path = $mybb->settings['bburl']. '/images/wetter/css/'. $css_file_name;
-    $page->extra_header.= "\n\t".'<link rel="stylesheet" type="text/css" href="'. htmlspecialchars($css_path). '" />';
-}
 global $mybb, $db, $lang, $page;
 
 // Load language file
