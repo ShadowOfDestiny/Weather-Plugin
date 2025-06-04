@@ -2,7 +2,7 @@
 // inc/languages/deutsch_du/admin/wetter.lang.php
 
 // Allgemeine Modul-Titel
-$l['wetter_plugin_name'] = "Wetter Plugin (Neu)"; // Name im Plugin Manager
+$l['wetter_plugin_name'] = "Wetter Plugin"; // Name im Plugin Manager
 
 // Hauptmenüpunkt im ACP (aus module_meta.php)
 $l['wetter_admin_title']               = "Wetterverwaltung";
@@ -120,6 +120,14 @@ $l['wetter_admin_delete_confirm_entry'] = "Diesen Wettereintrag wirklich lösche
 $l['wetter_admin_no_data_for_city_table'] = "Keine Wetterdaten für %s gefunden.";
 $l['wetter_admin_table_creation_hint_in_table_detailed'] = "Tabelle für %s (%s) nicht vorhanden oder leer.";
 $l['wetter_admin_weather_data_for_city_title_detailed'] = "Wetterdaten für: %s (%s)";
+
+// Für settings.php (NEU)
+$l['wetter_setting_items_per_page_frontend_title'] = "Einträge pro Seite (Frontend)";
+$l['wetter_setting_items_per_page_frontend_desc'] = "Anzahl der Wettereinträge, die pro Seite im Frontend angezeigt werden (0 für keine Paginierung oder um das Standardlimit der Abfrage zu nutzen).";
+$l['wetter_setting_items_per_page_acp_title'] = "Einträge pro Seite (ACP)";
+$l['wetter_setting_items_per_page_acp_desc'] = "Anzahl der Wettereinträge, die pro Seite in der ACP Übersicht (Aktuell & Archiv Ansicht) angezeigt werden.";
+$l['wetter_setting_version_title'] = "Wetter Plugin Version (intern)"; // Falls noch nicht vorhanden
+$l['wetter_setting_version_desc'] = "Speichert die aktuell installierte Version des Wetter Plugins. Nicht manuell ändern."; // Falls noch nicht vorhanden
 
 // Am Ende deiner admin/wetter.lang.php hinzufügen:
 $l['wetter_perm_can_manage_overview'] = "Kann Wetterübersicht verwalten?";

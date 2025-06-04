@@ -1,6 +1,6 @@
 <?php
 // inc/languages/deutsch_du/wetter.lang.php
-
+$l['nav_wetter'] = "Wetterliste";
 $l['wetter_title_default'] = "Wetterübersicht"; // Für den <title> und Breadcrumb
 $l['wetter_plugin_disabled_frontend'] = "Das Wetter-Plugin ist derzeit deaktiviert.";
 $l['wetter_nav_select_city_label'] = "Stadt auswählen:"; // Ist vielleicht schon vorhanden
@@ -38,6 +38,14 @@ $l['wetter_label_icon']       = "Icon";
 $l['wetter_archive_short']    = "Archiv";
 $l['wetter_current_short']    = "Aktuell";
 $l['wetter_breadcrumb_city_view'] = "%s (%s)"; // %1$s = Stadt, %2$s = Ansicht (Aktuell/Archiv)
+
+// Für Paginierung im Frontend (rootwetter.php)
+// MyBB's multipage() Funktion verwendet oft globale Sprachvariablen.
+// Hier sind Beispiele, falls du sie anpassen oder spezifisch machen möchtest:
+$l['wetter_pagination_prev'] = "&laquo; Vorherige";
+$l['wetter_pagination_next'] = "Nächste &raquo;";
+$l['wetter_pagination_page'] = "Seite";
+$l['wetter_pagination_of'] = "von"; // z.B. "Seite X von Y"
 
 // Für die Tabellenüberschriften und Seitenüberschriften
 $l['wetter_page_title_default'] = "Wetterinformationen"; // Ist vielleicht schon vorhanden

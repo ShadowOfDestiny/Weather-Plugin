@@ -1,4 +1,6 @@
 <?php
+// admin/modules/wetter/wetter_entry.php
+
 // Ggf. den Pfad anpassen, stelle sicher, dass das Verzeichnis schreibbar ist
 ini_set('error_log', MYBB_ROOT . 'logs/php_acp_error.log'); // MYBB_ROOT.'logs/...' ist oft besser
 

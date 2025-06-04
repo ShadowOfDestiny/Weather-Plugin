@@ -1,72 +1,125 @@
 <?php
 /**
- * ACP-Modul für das Wetter Plugin
- *
- * Diese Datei muss unter inc/admin/modules/wetter/ abgelegt werden
+ * ACP-Modul für das Wetter Plugin - Einstellungen
  */
 
-if (!defined("IN_MYBB")) {
+if (!defined("IN_MYBB") || !defined("IN_ADMINCP")) {
     die("Direkter Zugriff nicht erlaubt.");
 }
 
-$page->add_breadcrumb_item("Wetter Plugin", "index.php?module=config-wetter");
+// Lade Admin-Sprachdatei, falls nicht schon geschehen (für Titel etc.)
+if(!isset($lang->wetter_admin_settings_title)) {
+    $lang->load("wetter", false, true);
+}
 
-// Laden der MyBB-eigenen Form-Klassen
-require_once MYBB_ADMIN_DIR."inc/class_form.php";
-require_once MYBB_ADMIN_DIR."inc/functions.php";
+
+$page->add_breadcrumb_item($lang->wetter_admin_title ?: "Wetterverwaltung", "index.php?module=wetter-overview");
+$page->add_breadcrumb_item($lang->wetter_admin_settings_title ?: "Wetter Plugin Einstellungen", "index.php?module=wetter-settings");
+
 
 // Wenn das Formular abgesendet wurde, speichere die Einstellungen
 if($mybb->request_method == "post")
 {
-	verify_post_check($mybb->input['my_post_key']);
-  // Die Einstellungen werden über MyBBs eigene Settings-API gespeichert.
-  // Du kannst alle Felder einzeln updaten:
-  $new_settings = [
-  "wetter_plugin_active" => $mybb->get_input('wetter_plugin_active', MyBB::INPUT_INT), // Name angepasst
-  "wetter_plugin_date_format" => $db->escape_string($mybb->get_input('wetter_plugin_date_format')), // Name angepasst
-  "wetter_plugin_active_months" => $db->escape_string($mybb->get_input('wetter_plugin_active_months')), // Name angepasst
-  "wetter_plugin_cities" => $db->escape_string($mybb->get_input('wetter_plugin_cities')) // Name angepasst
-  ];
-  foreach($new_settings as $name => $value)
-  {
-    $db->update_query("settings", ["value" => $db->escape_string($value)], "name='{$name}'");
-  }
-  rebuild_settings();
-  flash_message("Einstellungen gespeichert.", "success");
+	verify_post_check($mybb->get_input('my_post_key'));
+
+    $new_settings_values = [
+        "wetter_plugin_active" => $mybb->get_input('wetter_plugin_active', MyBB::INPUT_INT),
+        "wetter_plugin_date_format" => $mybb->get_input('wetter_plugin_date_format', MyBB::INPUT_STRING),
+        "wetter_plugin_active_months" => $mybb->get_input('wetter_plugin_active_months', MyBB::INPUT_STRING),
+        "wetter_plugin_cities" => $mybb->get_input('wetter_plugin_cities', MyBB::INPUT_STRING),
+        "wetter_plugin_items_per_page_frontend" => $mybb->get_input('wetter_plugin_items_per_page_frontend', MyBB::INPUT_INT), // NEU
+        "wetter_plugin_items_per_page_acp" => $mybb->get_input('wetter_plugin_items_per_page_acp', MyBB::INPUT_INT),       // NEU
+    ];
+
+    foreach($new_settings_values as $name => $value)
+    {
+        // Sicherstellen, dass die Einstellung existiert, bevor versucht wird, sie zu aktualisieren
+        $query_setting_exists = $db->simple_select("settings", "name", "name='".$db->escape_string($name)."'");
+        if($db->num_rows($query_setting_exists) > 0)
+        {
+            $db->update_query("settings", ["value" => $db->escape_string($value)], "name='".$db->escape_string($name)."'");
+        }
+        // Optional: Fehlerbehandlung, falls eine Einstellung nicht existiert (sollte durch Installation/Upgrade abgedeckt sein)
+    }
+
+    rebuild_settings();
+    flash_message($lang->settings_updated ?: "Einstellungen erfolgreich aktualisiert.", "success"); // Standard MyBB Sprachvariable verwenden
 	admin_redirect("index.php?module=wetter-settings");
 }
 
 // Ausgabe des Seiten-Headers
-$page->output_header("Wetter Plugin Einstellungen");
+$page->output_header($lang->wetter_admin_settings_title ?: "Wetter Plugin Einstellungen");
+
+// Nav-Tabs für Konsistenz im ACP-Modul
+$sub_menu = array();
+$sub_menu['overview']     = array('title' => $lang->wetter_admin_overview_title, 'link' => 'index.php?module=wetter-overview');
+$sub_menu['entry']        = array('title' => $lang->wetter_admin_entry_title, 'link' => 'index.php?module=wetter-entry');
+// $sub_menu['archive']      = array('title' => $lang->wetter_admin_manage_archive_title, 'link' => 'index.php?module=wetter-archive'); // Falls du diese Seite hast
+$sub_menu['archive_view'] = array('title' => $lang->wetter_admin_view_archive_title, 'link' => 'index.php?module=wetter-archive_view');
+$sub_menu['cities']       = array('title' => $lang->wetter_admin_manage_cities_title, 'link' => 'index.php?module=wetter-cities');
+$sub_menu['settings']     = array('title' => $lang->wetter_admin_settings_title, 'link' => 'index.php?module=wetter-settings', 'active' => true);
+$page->output_nav_tabs($sub_menu, 'settings');
+
 
 $form = new Form("index.php?module=wetter-settings", "post");
 
 // Erstelle ein Form Container
-$form_container = new FormContainer("Wetter Plugin Einstellungen");
+$form_container = new FormContainer($lang->wetter_settings_title ?: "Wetter Plugin Einstellungen");
 
-$yes = '<label for="wetter_plugin_active_yes"><input type="radio" name="wetter_plugin_active" id="wetter_plugin_active_yes" class="radio_input" value="1" ' . (($mybb->settings['wetter_plugin_active'] == 1) ? 'checked="checked"' : '') . ' /> ' . $lang->yes . '</label>';
-$no = '<label for="wetter_plugin_active_no"><input type="radio" name="wetter_plugin_active" id="wetter_plugin_active_no" class="radio_input" value="0" ' . (($mybb->settings['wetter_plugin_active'] == 0) ? 'checked="checked"' : '') . ' /> ' . $lang->no . '</label>';
-$yes_no_radio = $yes . " " . $no;
-
-$form_container->output_row("Plugin aktiv",
-    "Soll das Wetter Plugin aktiviert sein?",
-    $yes_no_radio,
-    "wetter_plugin_active" // Name im HTML-Formular auch anpassen
+// Plugin aktiv
+$form_container->output_row(
+    $lang->wetter_setting_active_title ?: "Plugin aktiv?",
+    $lang->wetter_setting_active_desc ?: "Soll das Wetter Plugin aktiviert sein und die Frontend-Seite erreichbar sein?",
+    $form->generate_yes_no_radio("wetter_plugin_active", $mybb->settings['wetter_plugin_active']),
+    "wetter_plugin_active"
 );
 
-$form_container->output_row("Datumsformat", "Das Format, nach dem das Datum abgefragt wird (z.B. Y-m-d)", $form->generate_text_box("wetter_plugin_date_format", $mybb->settings['wetter_plugin_date_format']), "wetter_plugin_date_format"); // Namen angepasst
+// Datumsformat
+$form_container->output_row(
+    $lang->wetter_setting_date_format_title ?: "Datumsformat (Frontend)",
+    $lang->wetter_setting_date_format_desc ?: "PHP Datumsformat für die Anzeige im Frontend (z.B. d.m.Y).",
+    $form->generate_text_box("wetter_plugin_date_format", $mybb->settings['wetter_plugin_date_format']),
+    "wetter_plugin_date_format"
+);
 
-$form_container->output_row("Aktive Wettermonate", "Gib die Monate ein, die als aktiv gelten (z.B. November,Dezember). Für andere Monate wird der Archivmodus genutzt.", $form->generate_text_box("wetter_plugin_active_months", $mybb->settings['wetter_plugin_active_months']), "wetter_plugin_active_months");
+// Aktive Monate
+$form_container->output_row(
+    $lang->wetter_setting_active_month_title ?: "Aktive Monate (CSV)",
+    $lang->wetter_setting_active_month_desc ?: "Komma-getrennte Liste der Monate (z.B. November,Dezember). Für nicht gelistete Monate wird das Archiv verwendet.",
+    $form->generate_text_box("wetter_plugin_active_months", $mybb->settings['wetter_plugin_active_months']),
+    "wetter_plugin_active_months"
+);
 
-$form_container->output_row("Städte für Wetterdaten", "Wird vom ACP-Modul Städte verwalten gepflegt. Hier nicht manuell ändern!", $form->generate_text_box("wetter_plugin_cities", $mybb->settings['wetter_plugin_cities']), "wetter_plugin_cities");
+// Konfigurierte Städte (Hinweis: wird durch Modul verwaltet)
+$form_container->output_row(
+    $lang->wetter_setting_cities_title ?: "Konfigurierte Städte (CSV)",
+    $lang->wetter_setting_cities_desc ?: "Wird vom ACP-Modul 'Städte verwalten' gepflegt. Hier nicht manuell ändern!",
+    $form->generate_text_box("wetter_plugin_cities", $mybb->settings['wetter_plugin_cities'], array('disabled' => true)), // Deaktiviert für manuelle Bearbeitung
+    "wetter_plugin_cities"
+);
+
+// NEU: Einträge pro Seite (Frontend)
+$form_container->output_row(
+    $lang->wetter_setting_items_per_page_frontend_title ?: "Einträge pro Seite (Frontend)",
+    $lang->wetter_setting_items_per_page_frontend_desc ?: "Anzahl der Wettereinträge, die pro Seite im Frontend angezeigt werden (0 für keine Paginierung).",
+    $form->generate_numeric_field("wetter_plugin_items_per_page_frontend", $mybb->settings['wetter_plugin_items_per_page_frontend'] ?? 15, array('min' => 0)),
+    "wetter_plugin_items_per_page_frontend"
+);
+
+// NEU: Einträge pro Seite (ACP)
+$form_container->output_row(
+    $lang->wetter_setting_items_per_page_acp_title ?: "Einträge pro Seite (ACP)",
+    $lang->wetter_setting_items_per_page_acp_desc ?: "Anzahl der Wettereinträge, die pro Seite in der ACP Übersicht angezeigt werden.",
+    $form->generate_numeric_field("wetter_plugin_items_per_page_acp", $mybb->settings['wetter_plugin_items_per_page_acp'] ?? 20, array('min' => 5)), // Mindestens 5 im ACP
+    "wetter_plugin_items_per_page_acp"
+);
+
 
 $form_container->end();
 
-$buttons[] = $form->generate_submit_button("Einstellungen speichern");
+$buttons[] = $form->generate_submit_button($lang->save_settings ?: "Einstellungen speichern");
 $form->output_submit_wrapper($buttons);
 $form->end();
 
 $page->output_footer();
 ?>
-
-

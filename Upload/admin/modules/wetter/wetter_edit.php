@@ -1,6 +1,9 @@
 <?php
 // admin/modules/wetter/wetter_edit.php
-
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+// Ggf. den Pfad anpassen, stelle sicher, dass das Verzeichnis schreibbar ist
 if (!defined("IN_MYBB") ||!defined("IN_ADMINCP")) {
     die("Direkter Zugriff nicht erlaubt.");
 }
@@ -103,13 +106,12 @@ if ($mybb->request_method == "post" && $mybb->get_input('submit_wetter_entry')) 
     if (empty($updated_data['icon']) || $updated_data['icon'] == 'wi-na') {
         $errors[] = $lang->wetter_admin_error_no_icon_selected;
     }
-    if(!empty($sonnenaufgang) && !preg_match("/^(?:[01]\d|2[0-3]):[0-5]\d$/", $sonnenaufgang)) {
+   if(!empty($sonnenaufgang) && !preg_match("/^(?:[01]\d|2[0-3]):[0-5]\d$/", $sonnenaufgang)) {
         $errors[] = $lang->wetter_admin_error_invalid_time_sunrise; // Neue Sprachvariable! z.B. "Ungültiges Zeitformat für Sonnenaufgang (erwartet HH:MM)."
     }
     if(!empty($sonnenuntergang) && !preg_match("/^(?:[01]\d|2[0-3]):[0-5]\d$/", $sonnenuntergang)) {
         $errors[] = $lang->wetter_admin_error_invalid_time_sunset; // Neue Sprachvariable! z.B. "Ungültiges Zeitformat für Sonnenuntergang (erwartet HH:MM)."
     }
-     // Temperatur sollte numerisch sein (ggf. mit Komma/Punkt für Dezimalstellen)
     if (!is_numeric(str_replace(',', '.', $updated_data['temperatur']))) {
          // $errors = $lang->wetter_admin_error_invalid_temperature; // Neue Sprachvariable nötig
     } else {
