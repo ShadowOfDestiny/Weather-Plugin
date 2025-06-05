@@ -1,6 +1,6 @@
 <?php
 // inc/languages/deutsch_du/wetter.lang.php
-$l['nav_wetter'] = "Wetterliste";
+
 $l['wetter_title_default'] = "Wetterübersicht"; // Für den <title> und Breadcrumb
 $l['wetter_plugin_disabled_frontend'] = "Das Wetter-Plugin ist derzeit deaktiviert.";
 $l['wetter_nav_select_city_label'] = "Stadt auswählen:"; // Ist vielleicht schon vorhanden

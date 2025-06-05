@@ -1,6 +1,6 @@
 <?php
 define("IN_MYBB", 1);
-define('THIS_SCRIPT', 'wetter.php'); // Oder rootwetter.php, je nachdem wie du es nennst
+define('THIS_SCRIPT', 'wetter.php'); 
 
 require_once "./global.php";
 
@@ -23,9 +23,6 @@ $lang->load("wetter");
 if (isset($mybb->settings['wetter_plugin_active']) && $mybb->settings['wetter_plugin_active'] == 0) {
     error($lang->wetter_plugin_disabled_frontend); 
 }
-
-// Navigation bar
-add_breadcrumb($lang->nav_wetter);
 
 $plugin_info_debug = wetter_info();
 $wetter_version_for_css = $mybb->settings['wetter_version'] ?? $plugin_info_debug['version'] ?? time(); // Für Cache-Busting der CSS-Datei, nimm die installierte Version
@@ -155,17 +152,39 @@ if (!empty($wetterdaten_fuer_diese_seite)) { // Verwende die paginierten Daten
         $wetter_entry_data['city_name_html'] = htmlspecialchars_uni($row['city_name'] ?? 'N/A'); 
         $wetter_entry_data['datum_formatiert'] = htmlspecialchars_uni(my_date($mybb->settings['wetter_plugin_date_format'], strtotime($row['datum'])));
         $wetter_entry_data['zeitspanne_html'] = htmlspecialchars_uni($row['zeitspanne']);
-        $wetter_entry_data['icon_html'] = !empty($row['icon']) && $row['icon'] != 'wi-na' ? '<i class="wi '.htmlspecialchars_uni($row['icon']).'" title="'.htmlspecialchars_uni($row['icon']).'"></i>' : '-';
+        $icon_klasse_aus_db = $row['icon'];
+		$wetter_entry_data['icon_html'] = !empty($icon_klasse_aus_db) && $icon_klasse_aus_db != 'wi-na' ? '<i class="wi wetter-icon-frontend-gross ' . htmlspecialchars_uni($icon_klasse_aus_db) . '" title="' . htmlspecialchars_uni($icon_klasse_aus_db) . '"></i>' : '-';
+
         $wetter_entry_data['temperatur_html'] = htmlspecialchars_uni($row['temperatur']).'&deg;C';
         $wetter_entry_data['wetterlage_html'] = htmlspecialchars_uni($row['wetterlage']);
         $wetter_entry_data['sonnenaufgang_html'] = !empty($row['sonnenaufgang']) ? htmlspecialchars_uni($row['sonnenaufgang']) : '-';
         $wetter_entry_data['sonnenuntergang_html'] = !empty($row['sonnenuntergang']) ? htmlspecialchars_uni($row['sonnenuntergang']) : '-';
-        $wetter_entry_data['mondphase_html'] = !empty($row['mondphase']) ? htmlspecialchars_uni($row['mondphase']) : '-';
-        $wetter_entry_data['windrichtung_html'] = !empty($row['windrichtung']) ? htmlspecialchars_uni($row['windrichtung']) : '-';
-        $wetter_entry_data['windstaerke_html'] = !empty($row['windstaerke']) ? htmlspecialchars_uni($row['windstaerke']).' km/h' : '-';
-        // Hier könntest du auch $row['luftfeuchtigkeit'] hinzufügen, falls du es für v1.2 implementiert hast
-        // $wetter_entry_data['luftfeuchtigkeit_html'] = !empty($row['luftfeuchtigkeit']) ? htmlspecialchars_uni($row['luftfeuchtigkeit']).'%' : '-';
+        
+        $mondphase_icon_class = $row['mondphase'];
+		if (!empty($mondphase_icon_class) && $mondphase_icon_class !== 'wi-na') {
+		$wetter_entry_data['mondphase_html'] = '<i class="wi wetter-icon-frontend-gross ' . htmlspecialchars_uni($mondphase_icon_class) . '" title="' . htmlspecialchars_uni($mondphase_icon_class) . '"></i>';
+		} else {
+		$wetter_entry_data['mondphase_html'] = '-';
+		}
 
+        
+        // Windrichtung vorbereiten
+        $windrichtung_db_val = $row['windrichtung']; // Enthält z.B. "wi-from-n"
+		$windrichtung_html_output = '-'; 
+
+		if (!empty($windrichtung_db_val) && $windrichtung_db_val !== 'wi-na') {
+		// Nur spezifische Wind-Richtung-Klassen bekommen das 'wi-wind' Präfix
+		if (strpos($windrichtung_db_val, 'wi-from-') === 0) { // Du hattest 'wi-towards-' ja entfernt
+        $windrichtung_html_output = '<i class="wi wetter-icon-frontend-gross wi-wind ' . htmlspecialchars_uni($windrichtung_db_val) . '" title="' . htmlspecialchars_uni($windrichtung_db_val) . '"></i>';
+		}
+            // Optional: Fallback für andere 'wi-' Klassen, falls die hier unerwartet landen (sollte für Windrichtung nicht passieren, wenn Daten konsistent sind)
+            // else if (strpos($windrichtung_db_val, 'wi-') === 0) { // Z.B. wenn 'wi-na' doch als Icon behandelt werden soll oder ein anderes generisches wi-Icon
+            //     $windrichtung_html_output = '<i class="wi ' . htmlspecialchars_uni($windrichtung_db_val) . '" title="' . htmlspecialchars_uni($windrichtung_db_val) . '"></i>';
+            // }
+        }
+        $wetter_entry_data['windrichtung_html'] = $windrichtung_html_output; // **KORREKTUR HIER**
+
+        $wetter_entry_data['windstaerke_html'] = !empty($row['windstaerke']) ? htmlspecialchars_uni($row['windstaerke']).' km/h' : '-';
 
         eval("\$wetter_table_rows_content .= \"".$templates->get("wetter_data_row")."\";");
         $alt_row_class_name = ($alt_row_class_name == 'trow1') ? 'trow2' : 'trow1';

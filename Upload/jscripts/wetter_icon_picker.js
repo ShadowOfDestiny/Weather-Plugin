@@ -1,73 +1,68 @@
 // wetter_icon_picker.js
-(function($){ // jQuery noConflict-Wrapper
-    $(document).ready(function() { // Stellt sicher, dass das DOM bereit ist
+(function($){
+    $(document).ready(function() {
+        var currentTargetInputId = null;
+        var currentTargetPreviewId = null;
+        var $modal = $('#wetter_icon_picker_modal'); // Modal einmalig selektieren
 
-        console.log("DEBUG: Wetter Icon Picker JavaScript (aus .js) wird ausgeführt UND DOM ist bereit!");
-
-        // Button zum Öffnen des Icon Pickers
-        const openButton = $('#wetter_open_icon_picker_button');
-        console.log("DEBUG INNERHALB READY: openButton Element:", openButton);
-        console.log("DEBUG INNERHALB READY: openButton.length:", openButton.length);
-
-        if(openButton.length) {
-            openButton.on('click', function(e) {
-                e.preventDefault();
-                console.log("DEBUG: Open Picker Button geklickt!");
-                $('#wetter_icon_picker_modal').fadeIn(200);
-            });
-        } else {
-            console.error("DEBUG INNERHALB READY: Button #wetter_open_icon_picker_button NICHT gefunden!");
+        if(!$modal.length) {
+            console.error("Wetter Icon Picker: Modal nicht gefunden!");
+            return; 
         }
+
+        // Klick auf einen der "Icon auswählen..." Buttons
+        $(document).on('click', '.open_icon_picker_button', function(e) { // Delegierter Event-Handler
+            e.preventDefault();
+            currentTargetInputId = $(this).data('target-input');
+            currentTargetPreviewId = $(this).data('target-preview');
+            
+            if (!currentTargetInputId || !currentTargetPreviewId) {
+                console.error("Wetter Icon Picker: Target Input/Preview nicht im Button-Data definiert.");
+                return;
+            }
+            // Optional: Aktuellen Wert des Inputs im Modal vorselektieren/hervorheben (für später)
+            $modal.fadeIn(200);
+        });
 
         // Button zum Schließen des Icon Pickers
-        const closeButton = $('#wetter_close_icon_picker_button');
-        console.log("DEBUG INNERHALB READY: closeButton Element:", closeButton);
-        console.log("DEBUG INNERHALB READY: closeButton.length:", closeButton.length);
-
-        if(closeButton.length) {
-            closeButton.on('click', function(e) {
-                e.preventDefault();
-                console.log("DEBUG: Close Picker Button geklickt!");
-                $('#wetter_icon_picker_modal').fadeOut(200);
-            });
-        } else {
-            console.error("DEBUG INNERHALB READY: Button #wetter_close_icon_picker_button NICHT gefunden!");
-        }
+        $('#wetter_close_icon_picker_button').on('click', function(e) {
+            e.preventDefault();
+            $modal.fadeOut(200);
+            currentTargetInputId = null; // Zurücksetzen
+            currentTargetPreviewId = null; // Zurücksetzen
+        });
 
         // Klick auf ein Icon im Picker
-        const iconListContainer = $('#wetter_icon_list_container');
-        console.log("DEBUG INNERHALB READY: iconListContainer Element:", iconListContainer);
-        console.log("DEBUG INNERHALB READY: iconListContainer.length:", iconListContainer.length);
+        $('#wetter_icon_list_container').on('click', '.wetter_icon_picker_item', function(e) {
+            e.preventDefault();
+            var selectedIconClass = $(this).data('icon-class');
+            
+            if (currentTargetInputId && currentTargetPreviewId) {
+			$('#' + currentTargetInputId).val(selectedIconClass); // selectedIconClass ist z.B. 'wi-towards-n'
+        
+			let displayPreviewClass = selectedIconClass;
+			// Prüfe, ob es sich um das Vorschaufeld der Windrichtung handelt (anhand der ID oder eines data-Attributs)
+			if (currentTargetPreviewId === 'windrichtung_icon_preview' && (selectedIconClass.includes('towards-') || selectedIconClass.includes('from-') || selectedIconClass.includes('beaufort-'))) {
+            displayPreviewClass = 'wi-wind ' + selectedIconClass;
+			}
+			// Für Mond und Hauptwetter bleibt es die einfache Klasse (oder du prüfst hier auch auf 'wi-moon-...' etc., falls die auch eine Basisklasse bräuchten)
 
-        if(iconListContainer.length) {
-            iconListContainer.on('click', '.wetter_icon_picker_item', function(e) {
-                // ... (Rest der Logik wie gehabt) ...
-                e.preventDefault();
-                var selectedIconClass = $(this).data('icon-class');
-                console.log("DEBUG: Icon ausgewählt:", selectedIconClass);
-                $('#wetter_icon_class_input').val(selectedIconClass);
-                $('#wetter_icon_preview').html('<i class="wi ' + selectedIconClass + '"></i>');
-                $('#wetter_icon_picker_modal').fadeOut(200);
-            });
-        } else {
-            console.error("DEBUG INNERHALB READY: Container #wetter_icon_list_container NICHT gefunden!");
-        }
+			$('#' + currentTargetPreviewId).html('<i class="wi ' + displayPreviewClass + '"></i>');
+			console.log("DEBUG: Aktualisiere Input:", currentTargetInputId, "Preview:", currentTargetPreviewId, "mit Klasse:", displayPreviewClass);
+		} 
+            
+            $modal.fadeOut(200);
+            currentTargetInputId = null; // Zurücksetzen
+            currentTargetPreviewId = null; // Zurücksetzen
+        });
 
-        // Optional: Modal schließen, wenn auf den Hintergrund des Modals geklickt wird
-        const modal = $('#wetter_icon_picker_modal');
-        console.log("DEBUG INNERHALB READY: modal Element:", modal);
-        console.log("DEBUG INNERHALB READY: modal.length:", modal.length);
-
-        if(modal.length) {
-            modal.on('click', function(e) {
-                if ($(e.target).is('#wetter_icon_picker_modal')) {
-                    console.log("DEBUG: Modal Hintergrund geklickt!");
-                    $(this).fadeOut(200);
-                }
-            });
-        } else {
-            console.error("DEBUG INNERHALB READY: Modal #wetter_icon_picker_modal NICHT gefunden!");
-        }
-
-    }); // Ende von $(document).ready
-})(jQuery); // Ende der Kapselung
+        // Modal schließen bei Klick auf Hintergrund
+        $modal.on('click', function(e) {
+            if ($(e.target).is($modal)) { // Nur wenn direkt auf den Modal-Hintergrund geklickt wird
+                $(this).fadeOut(200);
+                currentTargetInputId = null; // Zurücksetzen
+                currentTargetPreviewId = null; // Zurücksetzen
+            }
+        });
+    });
+})(jQuery);

@@ -1,0 +1,7 @@
+/* wetter_acp_styles.css */
+.wetter-icon-acp-gross { /* Eigene Klasse für größere Icons im ACP */
+    font-size: 1.8em !important; /* Passe die Größe nach Wunsch an (z.B. 20px, 1.8em) */
+    vertical-align: middle;      /* Für bessere Ausrichtung */
+    line-height: 1;
+    display: inline-block;       /* Behält die guten Eigenschaften von .wi bei */
+}

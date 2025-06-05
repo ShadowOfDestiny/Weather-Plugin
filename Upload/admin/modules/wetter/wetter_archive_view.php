@@ -24,11 +24,28 @@ if (!function_exists('wetter_sanitize_city_name_for_table') || !function_exists(
 }
 // ACP CSS für Icons laden
 if (is_object($page) && property_exists($page, 'extra_header')) {
-    $css_file_name = 'weather-icons.min.css';
-    $css_path = $mybb->settings['bburl']. '/images/wetter/css/'. $css_file_name;
-    $page->extra_header.= "\n\t".'<link rel="stylesheet" type="text/css" href="'. htmlspecialchars($css_path). '" />';
-}
+    $plugin_version = time(); // Fallback
+    if (function_exists('wetter_info')) {
+        $plugin_info_css = wetter_info();
+        if (isset($plugin_info_css['version'])) {
+            $plugin_version = $plugin_info_css['version'];
+        }
+    }
+    $version_param_css = '?v=' . $plugin_version;
 
+    // Original Wetter-Icon CSS Dateien
+    $css_file_main_name = 'weather-icons.min.css';
+    $css_path_main = $mybb->settings['bburl'] . '/images/wetter/css/' . $css_file_main_name . $version_param_css;
+    $page->extra_header .= "\n\t" . '<link rel="stylesheet" type="text/css" href="' . htmlspecialchars($css_path_main) . '" />';
+
+    $css_file_wind_name = 'weather-icons-wind.min.css';
+    $css_path_wind = $mybb->settings['bburl'] . '/images/wetter/css/' . $css_file_wind_name . $version_param_css;
+    $page->extra_header .= "\n\t" . '<link rel="stylesheet" type="text/css" href="' . htmlspecialchars($css_path_wind) . '" />';
+
+    // Deine benutzerdefinierte ACP CSS-Datei
+    $custom_acp_css_path = $mybb->settings['bburl'] . '/images/wetter/css/wetter_acp_styles.css' . $version_param_css; // Pfad anpassen, falls nötig
+    $page->extra_header .= "\n\t" . '<link rel="stylesheet" type="text/css" href="' . htmlspecialchars($custom_acp_css_path) . '" />';
+}
 
 // Paginierungsparameter ACP
 $page_num_acp = $mybb->get_input('page', MyBB::INPUT_INT);
@@ -135,17 +152,34 @@ if ($query && $db->num_rows($query) > 0) {
         $table_output->construct_cell(htmlspecialchars($row['zeitspanne']));
         $icon_klasse_aus_db = htmlspecialchars($row['icon']);
         if (!empty($icon_klasse_aus_db) && $icon_klasse_aus_db !== 'wi-na') {
-            $table_output->construct_cell('<span class="wetter-icon-display" title="' . $icon_klasse_aus_db . '"><i class="wi ' . $icon_klasse_aus_db . '"></i></span>', array("class" => "align_center"));
+            $table_output->construct_cell('<span class="wetter-icon-display" title="' . $icon_klasse_aus_db . '"><i class="wi wetter-icon-acp-gross ' . $icon_klasse_aus_db . '"></i></span>', array("class" => "align_center"));
         } else {
             $table_output->construct_cell('-', array("class" => "align_center"));
         }
         $table_output->construct_cell(htmlspecialchars($row['temperatur']) . "°C");
         $table_output->construct_cell(htmlspecialchars($row['wetterlage']));
-        $table_output->construct_cell(!empty($row['sonnenaufgang']) ? htmlspecialchars($row['sonnenaufgang']) : '-');
-        $table_output->construct_cell(!empty($row['sonnenuntergang']) ? htmlspecialchars($row['sonnenuntergang']) : '-');
-        $table_output->construct_cell(!empty($row['mondphase']) ? htmlspecialchars($row['mondphase']) : '-');
-        $table_output->construct_cell(!empty($row['windrichtung']) ? htmlspecialchars($row['windrichtung']) : '-');
-        $table_output->construct_cell(!empty($row['windstaerke']) ? htmlspecialchars($row['windstaerke']) . " km/h" : '-');
+        $table_output->construct_cell(!empty($row['sonnenaufgang']) ? htmlspecialchars($row['sonnenaufgang']) : '-'); // Gut
+$table_output->construct_cell(!empty($row['sonnenuntergang']) ? htmlspecialchars($row['sonnenuntergang']) : '-'); // Gut
+
+// --- ANPASSUNG VORSCHLAG FÜR MONSPHASE ---
+// Alt: $table_output->construct_cell(!empty($row['mondphase']) ? htmlspecialchars($row['mondphase']) : '-');
+$mondphase_icon_db = htmlspecialchars($row['mondphase']);
+        if (!empty($mondphase_icon_db) && $mondphase_icon_db !== 'wi-na') {
+    $table_output->construct_cell('<span class="wetter-icon-display" title="' . $mondphase_icon_db . '"><i class="wi wetter-icon-acp-gross ' . $mondphase_icon_db . '"></i></span>', array("class" => "align_center"));
+} else {
+    $table_output->construct_cell('-', array("class" => "align_center"));
+}
+// --- ENDE ANPASSUNG MONSPHASE ---
+
+$windrichtung_db_val = htmlspecialchars_uni($row['windrichtung']);
+if (!empty($windrichtung_db_val) && $windrichtung_db_val !== 'wi-na') {
+    // KORREKTUR: $table_output statt $table verwenden
+    $table_output->construct_cell('<i class="wi wetter-icon-acp-gross wi-wind ' . htmlspecialchars_uni($windrichtung_db_val) . '" title="' . htmlspecialchars_uni($windrichtung_db_val) . '"></i>', array("class" => "align_center"));
+} else {
+    // KORREKTUR: $table_output statt $table verwenden
+    $table_output->construct_cell('-', array("class" => "align_center"));
+}
+$table_output->construct_cell(!empty($row['windstaerke']) ? htmlspecialchars($row['windstaerke']) . " km/h" : '-');
         $table_output->construct_row();
     }
 } else {

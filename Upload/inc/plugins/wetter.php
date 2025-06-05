@@ -22,14 +22,16 @@ function wetter_admin_load_check() {
 // Deine CSS-Ausgabefunktion
 function wetter_output_acp_css($page_obj) {
     global $mybb, $wetter_load_css;
-    if ($wetter_load_css) {
-        $plugin_info = wetter_info();
-        $css_file_name = 'weather-icons.min.css';
-        $css_url = $mybb->settings['bburl'] . '/images/wetter/css/' . $css_file_name;
-        $css_url .= '?v=' . (isset($plugin_info['version']) ? $plugin_info['version'] : time());
-
+    if ($wetter_load_css) { 
         if (is_object($page_obj) && method_exists($page_obj, 'add_header_stylesheet')) {
-            $page_obj->add_header_stylesheet($css_url);
+            $plugin_info = wetter_info();
+            $version_param = '?v=' . (isset($plugin_info['version']) ? $plugin_info['version'] : time());
+
+            $css_url_main = $mybb->settings['bburl'] . '/images/wetter/css/weather-icons.min.css' . $version_param;
+            $page_obj->add_header_stylesheet($css_url_main);
+
+            $css_url_wind = $mybb->settings['bburl'] . '/images/wetter/css/weather-icons-wind.min.css' . $version_param;
+            $page_obj->add_header_stylesheet($css_url_wind);
         }
     }
     return $page_obj;
@@ -64,7 +66,7 @@ function wetter_info() {
         "website"         => "https://shadow.or.at/index.php",
         "author"          => "Dani",
         "authorsite"      => "https://github.com/ShadowOfDestiny",
-        "version"         => "1.2", // Deine aktuelle Zielversion
+        "version"         => "1.3.2", // Deine aktuelle Zielversion
         "compatibility"   => "18*",
         "codename"        => "wetter" // GUID entfernt, codename ist für MyBB 1.8+ Standard
     );
@@ -152,29 +154,10 @@ function wetter_install() {
         $templategroup_frontend_data = array("prefix" => "wetter", "title"  => "Wetter Frontend"); // Umbenannt
         $db->insert_query("templategroups", $templategroup_frontend_data);
     }
+            wetter_manage_templates('install');
 
-    // 4. Templates erstellen mit der neuen Funktion
-    wetter_manage_templates('install'); 
 
-    // 5. Stylesheet installieren (dein Code hierfür ist gut)
-    $css_name_check = 'wetter.css';
-    $css_tid_check = 1; 
-    $query_check_css = $db->simple_select("themestylesheets", "sid", "name='".$db->escape_string($css_name_check)."' AND tid='".(int)$css_tid_check."'", array("limit" => 1));
-    if($db->num_rows($query_check_css) == 0) { 
-        $css_content_string = ":root { /* ... dein CSS ... */ }"; // CSS hier einfügen
-        $css_array = array( // Umbenannt
-            'name' => $css_name_check, 'tid' => (int)$css_tid_check, 'attachedto' => '', 
-            "stylesheet" => $db->escape_string($css_content_string),
-            'cachefile' => $db->escape_string($css_name_check), 'lastmodified' => time()
-        );
-        require_once MYBB_ADMIN_DIR . "inc/functions_themes.php";
-        $sid_css = $db->insert_query("themestylesheets", $css_array); // Umbenannt
-        $db->update_query("themestylesheets", array("cachefile" => "css.php?stylesheet=" . (int)$sid_css), "sid = '" . (int)$sid_css . "'", 1);
-        $query_themes_css = $db->simple_select("themes", "tid"); // Umbenannt
-        while ($theme_item_css = $db->fetch_array($query_themes_css)) { // Umbenannt
-            update_theme_stylesheet_list((int)$theme_item_css['tid']);
-        }
-    } 
+			wetter_manage_css('install');
 } 
 
 // Plugin ist installiert?
@@ -217,43 +200,48 @@ function wetter_uninstall() {
 // Plugin Aktivierung (enthält jetzt die Update-Logik)
 function wetter_activate() {
     global $mybb, $db, $lang;
+    
+    // Lade die Sprachdatei hier direkt am Anfang.
+    if(!isset($lang->wetter_plugin_name)) {
+        $lang->load("wetter", false, true);
+    }
 
     $plugin_info = wetter_info();
-    $neue_version = $plugin_info['version']; // Das ist jetzt "1.2"
+    $neue_version = $plugin_info['version']; 
 
     $installierte_version = '0.0.0'; 
     if (isset($mybb->settings['wetter_version'])) { 
         $installierte_version = $mybb->settings['wetter_version'];
     } else {
         // Notfall: Versionseinstellung fehlt, versuche sie zu erstellen
-        if(!isset($lang->wetter_setting_version_title)) { $lang->load("wetter", false, true); }
-        $gid_query_activate = $db->simple_select("settinggroups", "gid", "name='wetter_plugin_settings'", array("limit" => 1)); // Umbenannt
-        $sg_data_activate = $db->fetch_array($gid_query_activate); // Umbenannt
+        $gid_query_activate = $db->simple_select("settinggroups", "gid", "name='wetter_plugin_settings'", array("limit" => 1));
+        $sg_data_activate = $db->fetch_array($gid_query_activate);
         if($sg_data_activate['gid']) {
-            $version_setting_data_activate = array( // Umbenannt
-                "name" => "wetter_version", 
-                "title" => $lang->wetter_setting_version_title ?: "Wetter Plugin Version (intern)",
-                "description" => $lang->wetter_setting_version_desc ?: "Installierte Version.",
-                "optionscode" => "text", "value" => "1.0", // Setze auf eine bekannte "alte" Version
-                "disporder" => 1, "gid" => (int)$sg_data_activate['gid']
-            );
-            $db->insert_query("settings", $version_setting_data_activate);
-            rebuild_settings(); 
+            $check_version_setting = $db->simple_select("settings", "sid", "name='wetter_version'");
+            if($db->num_rows($check_version_setting) == 0) {
+                $version_setting_data_activate = array( 
+                    "name" => "wetter_version", 
+                    "title" => $lang->wetter_setting_version_title ?: "Wetter Plugin Version (intern)",
+                    "description" => $lang->wetter_setting_version_desc ?: "Installierte Version.",
+                    "optionscode" => "text", "value" => "1.0", // Setze auf eine bekannte "alte" Version
+                    "disporder" => 1, "gid" => (int)$sg_data_activate['gid']
+                );
+                $db->insert_query("settings", $version_setting_data_activate);
+                rebuild_settings(); 
+            }
             $installierte_version = "1.0"; 
         }
+        // Wenn die Einstellungsgruppe nicht gefunden wird, bleibt $installierte_version '0.0.0',
+        // was den Update-Pfad auch auslösen sollte.
     }
 
+    // Nur Update-Logik ausführen, wenn die neue Version höher ist als die installierte
     if (version_compare($installierte_version, $neue_version, '<')) {
         
-        // require_once MYBB_ROOT."inc/adminfunctions_templates.php"; // Nur für find_replace_templatesets für Core-Templates nötig
-
-        // --- Update für Versionen < 1.1 auf 1.1 (oder neuer) ---
-        // Dieser Block stellt sicher, dass Paginierungs-Einstellungen existieren, falls jemand von <1.1 direkt auf 1.2+ updated.
+        // --- Update für Versionen < 1.1 ---
         if (version_compare($installierte_version, '1.1', '<')) {
-            if(!isset($lang->wetter_setting_items_per_page_frontend_title)) { $lang->load("wetter", false, true); } // Lade Sprache, falls nicht schon geschehen
-            
-            $query_gid_update_1_1 = $db->simple_select("settinggroups", "gid", "name='wetter_plugin_settings'"); // Umbenannt
-            $gid_for_update_1_1 = (int)$db->fetch_field($query_gid_update_1_1, "gid"); // Umbenannt
+            $query_gid_update_1_1 = $db->simple_select("settinggroups", "gid", "name='wetter_plugin_settings'");
+            $gid_for_update_1_1 = (int)$db->fetch_field($query_gid_update_1_1, "gid");
 
             if($gid_for_update_1_1) {
                 $setting_fe_items_data = array( 
@@ -264,7 +252,9 @@ function wetter_activate() {
                     "disporder"   => 6, "gid" => $gid_for_update_1_1
                 );
                 $check_fe = $db->simple_select("settings", "name", "name='wetter_plugin_items_per_page_frontend'");
-                if($db->num_rows($check_fe) == 0) $db->insert_query("settings", $setting_fe_items_data);
+                if($db->num_rows($check_fe) == 0) {
+                    $db->insert_query("settings", $setting_fe_items_data);
+                }
 
                 $setting_acp_items_data = array( 
                     "name" => "wetter_plugin_items_per_page_acp",
@@ -274,27 +264,89 @@ function wetter_activate() {
                     "disporder"   => 7, "gid" => $gid_for_update_1_1
                 );
                 $check_acp = $db->simple_select("settings", "name", "name='wetter_plugin_items_per_page_acp'");
-                if($db->num_rows($check_acp) == 0) $db->insert_query("settings", $setting_acp_items_data);
+                if($db->num_rows($check_acp) == 0) {
+                    $db->insert_query("settings", $setting_acp_items_data);
+                }
             } else {
                 if(defined('IN_ADMINCP')) {
-                    flash_message($lang->sprintf($lang->wetter_error_settinggroup_not_found, 'wetter_plugin_settings') . " (Update-Vorbereitung)", 'error');
+                    flash_message($lang->sprintf($lang->wetter_error_settinggroup_not_found ?: "Einstellungsgruppe %s nicht gefunden.", 'wetter_plugin_settings') . " (Update für <1.1)", 'error');
                 }
             }
-        } 
+        }  
 
-        // --- Update für Versionen < 1.2 auf 1.2 (oder neuer) ---
-        // Dieser Block wird ausgeführt, wenn die installierte Version kleiner als 1.2 ist.
-        // Die wetter_manage_templates('update') Funktion stellt sicher, dass die Templates den Stand von Version 1.2 haben.
-        if (version_compare($installierte_version, '1.2', '<')) {
+        // --- Update für Versionen < 1.2 (Templates für Paginierung aktualisieren) ---
+        if (version_compare($installierte_version, '1.2', '<')) { 
             wetter_manage_templates('update'); 
-
-            // Hier könnten weitere spezifische Änderungen für v1.2 hinzukommen (DB-Schema etc.)
         }
         
-        // Plugin-Version in der Datenbank auf die aktuelle $neue_version aktualisieren
+        // --- Update für Versionen < 1.3 (Datenbankspalten, Templates) ---
+        if (version_compare($installierte_version, '1.3', '<')) { 
+            
+            // 1. Datenbankspalten-Typen anpassen
+            if (isset($mybb->settings['wetter_plugin_cities'])) {
+                $cities_array_for_alter_v1_3 = wetter_helper_get_cities_array_from_string($mybb->settings['wetter_plugin_cities']);
+                if (!empty($cities_array_for_alter_v1_3)) {
+                    foreach ($cities_array_for_alter_v1_3 as $city_name_for_alter) {
+                        $city_suffix_for_alter = wetter_sanitize_city_name_for_table($city_name_for_alter);
+                        if (!empty($city_suffix_for_alter)) {
+                            $table_main_no_prefix_v1_3 = "wetter_". $city_suffix_for_alter;
+                            $table_archive_no_prefix_v1_3 = $table_main_no_prefix_v1_3. "_archiv";
+
+                            // Haupttabellen anpassen
+                            if ($db->table_exists($table_main_no_prefix_v1_3)) {
+                                if ($db->field_exists("mondphase", $table_main_no_prefix_v1_3)) {
+                                    $db->modify_column($table_main_no_prefix_v1_3, "mondphase", "VARCHAR(100) NOT NULL DEFAULT 'wi-na'");
+                                }
+                                if ($db->field_exists("windrichtung", $table_main_no_prefix_v1_3)) {
+                                    $db->modify_column($table_main_no_prefix_v1_3, "windrichtung", "VARCHAR(100) NOT NULL DEFAULT 'wi-na'");
+                                }
+                                if ($db->field_exists("wetterlage", $table_main_no_prefix_v1_3)) {
+                                    $db->modify_column($table_main_no_prefix_v1_3, "wetterlage", "TEXT NOT NULL");
+                                }
+                            }
+                            // Archivtabellen anpassen
+                            if ($db->table_exists($table_archive_no_prefix_v1_3)) {
+                                if ($db->field_exists("mondphase", $table_archive_no_prefix_v1_3)) {
+                                    $db->modify_column($table_archive_no_prefix_v1_3, "mondphase", "VARCHAR(100) NOT NULL DEFAULT 'wi-na'");
+                                }
+                                if ($db->field_exists("windrichtung", $table_archive_no_prefix_v1_3)) {
+                                    $db->modify_column($table_archive_no_prefix_v1_3, "windrichtung", "VARCHAR(100) NOT NULL DEFAULT 'wi-na'");
+                                }
+                                if ($db->field_exists("wetterlage", $table_archive_no_prefix_v1_3)) {
+                                    $db->modify_column($table_archive_no_prefix_v1_3, "wetterlage", "TEXT NOT NULL");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            wetter_manage_templates('update');
+            // Der Aufruf von wetter_manage_css('update'); wurde in den nächsten Block verschoben,
+            // um sicherzustellen, dass er für die aktuellste Version ($neue_version) ausgeführt wird.
+        }
+
+        // --- Finale Updates für die aktuelle $neue_version (z.B. 1.3.2) ---
+        // Dieser Block stellt sicher, dass die allerneuesten Änderungen für Templates und CSS
+        // angewendet werden, basierend auf den Definitionen in den manage_*-Funktionen,
+        // die den Stand der $neue_version widerspiegeln sollten.
+        // Die Bedingung version_compare($installierte_version, $neue_version, '<') ist hier redundant,
+        // da wir uns bereits innerhalb des Haupt-Update-Blocks befinden.
+        // Ein direkter Aufruf genügt, wenn dies der letzte Schritt vor dem Versionsupdate ist.
+        
+        // Optional: Wenn sich Templates spezifisch für $neue_version geändert haben und nicht schon durch frühere Aufrufe abgedeckt sind:
+        // wetter_manage_templates('update'); 
+        
+        wetter_manage_css('update'); // Stellt sicher, dass CSS auf dem neuesten Stand ist
+
+        // Am Ende aller spezifischen Update-Schritte: Version in DB setzen
         $db->update_query("settings", array("value" => $db->escape_string($neue_version)), "name='wetter_version'"); 
         rebuild_settings(); 
     }
+    // else {
+        // Kein Update notwendig, da Version aktuell oder neuer ist.
+        // (Hier war deine "else ende" Log-Nachricht)
+    // }
 
     wetter_helper_check_and_create_all_city_tables();
 }
@@ -325,7 +377,7 @@ function wetter_manage_templates($mode = 'install') {
     <title>{$mybb->settings[\'bbname\']} - {$page_title_for_template}</title> 
     {$headerinclude}
     <link rel="stylesheet" href="{$mybb->settings[\'bburl\']}/images/wetter/css/weather-icons.min.css?v={$mybb->settings[\'wetter_version\']}" type="text/css" />
-</head>
+    <link rel="stylesheet" href="{$mybb->settings[\'bburl\']}/images/wetter/css/weather-icons-wind.min.css?v={$mybb->settings[\'wetter_version\']}" type="text/css" /> </head>
 <body>
     {$header}
     {$wetter_navigation_output}
@@ -333,22 +385,23 @@ function wetter_manage_templates($mode = 'install') {
         <thead>
             <tr><td class="thead" colspan="11"><strong>{$headline_text_for_page}</strong></td></tr>
             <tr>
-                <td class="tcat" width="12%"><span class="smalltext"><strong><center>{$lang->wetter_label_city}</center></strong></span></td>
+                <td class="tcat" width="13%"><span class="smalltext"><strong><center>{$lang->wetter_label_city}</center></strong></span></td>
                 <td class="tcat" width="10%"><span class="smalltext"><strong><center>{$lang->wetter_label_date}</center></strong></span></td>
                 <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_timeslot}</center></strong></span></td>
                 <td class="tcat" width="5%"><span class="smalltext"><strong><center>{$lang->wetter_label_icon}</center></strong></span></td>
                 <td class="tcat" width="10%"><span class="smalltext"><strong><center>{$lang->wetter_label_temp}</center></strong></span></td>
-                <td class="tcat" width="15%"><span class="smalltext"><strong><center>{$lang->wetter_label_condition}</center></strong></span></td>
+                <td class="tcat" width="20%"><span class="smalltext"><strong><center>{$lang->wetter_label_condition}</center></strong></span></td>
                 <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_sunrise}</center></strong></span></td>
                 <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_sunset}</center></strong></span></td>
-                <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_moonphase}</center></strong></span></td>
-                <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_winddirection}</center></strong></span></td>
+                <td class="tcat" width="5%"><span class="smalltext"><strong><center>{$lang->wetter_label_moonphase}</center></strong></span></td>
+                <td class="tcat" width="5%"><span class="smalltext"><strong><center>{$lang->wetter_label_winddirection}</center></strong></span></td>
                 <td class="tcat" width="8%"><span class="smalltext"><strong><center>{$lang->wetter_label_windspeed}</center></strong></span></td>
             </tr>
         </thead>
         <tbody>{$wetter_table_rows_content}</tbody>
     </table>
-    {$frontend_pagination} {$footer}
+    {$frontend_pagination}
+    {$footer}
 </body>
 </html>';
     $templates_definition['wetter_main'] = array(
@@ -438,6 +491,105 @@ function wetter_manage_templates($mode = 'install') {
 }
 
 
+    // HIER FÜGEN WIR DIE CSS MANAGEMENT LOGIK EIN
+    function wetter_manage_css($mode = 'install') {
+    global $db;
+
+    $css_name_to_manage = 'wetter.css';
+    $css_tid_to_manage = 1; // Zielt auf Theme ID 1 (Standard-Theme)
+
+    // Definiere hier den VOLLSTÄNDIGEN und AKTUELLEN Inhalt für wetter.css
+    // Inklusive deiner CSS-Variablen, bestehenden Regeln UND der neuen Regel für größere Icons.
+    $expected_css_content = ":root {
+    --wetter-background-color: #f0f0f0;
+    --wetter-primary-color: #007acc;
+    --wetter-secondary-color: #dddddd;
+    --wetter-text-color: #333333;
+    --wetter-filter-bar-background: #e0e0e0;
+    --wetter-filter-bar-text-color: #333333; 
+    --wetter-filter-bar-border-color: #c0c0c0;
+}
+.wetter_filter_bar {
+    text-align: center; 
+    margin: 10px 0; 
+    padding: 10px;
+    background: var(--wetter-filter-bar-background);
+    color: var(--wetter-filter-bar-text-color);
+    border: 1px solid var(--wetter-filter_bar-border-color);
+    border-radius: 4px;
+}
+.weather {
+    max-width: 1080px; margin: 0 auto;
+    background-color: var(--wetter-background-color); padding: 20px;
+}
+.weather-entry {
+    border: 1px solid var(--wetter-secondary-color); padding: 15px;
+    margin-bottom: 20px; background-color: #fff;
+}
+.weather-entry h2 {
+    color: var(--wetter-primary-color); margin-top: 0;
+}
+.weather-entry p {
+    color: var(--wetter-text-color);
+}
+/* NEU: Die Regel für größere Frontend-Icons hier einfügen */
+.wetter-icon-frontend-gross { /* Stelle sicher, dass du diese Klasse auch im PHP verwendest */
+    font-size: 1.8em !important; /* Deine gewünschte Größe, !important zum Testen/Sicherstellen */
+    vertical-align: middle;
+    line-height: 1;
+}
+"; // Ende des $expected_css_content Strings
+
+    // --- Logik zum Prüfen, Aktualisieren oder Erstellen des Stylesheets ---
+    $query_existing_css = $db->simple_select(
+        "themestylesheets",
+        "sid, stylesheet",
+        "name='" . $db->escape_string($css_name_to_manage) . "' AND tid='" . (int)$css_tid_to_manage . "'",
+        array("limit" => 1)
+    );
+    $existing_css_data = $db->fetch_array($query_existing_css);
+
+    require_once MYBB_ADMIN_DIR . "inc/functions_themes.php";
+    $css_was_changed = false;
+
+    if ($existing_css_data) {
+        // Stylesheet existiert, prüfen ob der Inhalt dem erwarteten Inhalt entspricht
+        if (trim($existing_css_data['stylesheet']) !== trim($expected_css_content)) {
+            // Inhalt ist anders, also aktualisieren
+            $db->update_query("themestylesheets", array(
+                "stylesheet" => $db->escape_string($expected_css_content),
+                "lastmodified" => time()
+            ), "sid = '" . (int)$existing_css_data['sid'] . "'");
+            $css_was_changed = true;
+        }
+    } else {
+        // Stylesheet existiert nicht für tid=1, also neu erstellen
+        $css_insert_array = array(
+            'name' => $css_name_to_manage,
+            'tid' => (int)$css_tid_to_manage,
+            'attachedto' => '', 
+            "stylesheet" => $db->escape_string($expected_css_content),
+            'cachefile' => $db->escape_string($css_name_to_manage), // MyBB passt dies beim Cache-Aufbau an
+            'lastmodified' => time()
+        );
+        $new_sid = $db->insert_query("themestylesheets", $css_insert_array);
+        // Den cachefile-Pfad korrekt setzen, wie MyBB es macht
+        $db->update_query("themestylesheets", array("cachefile" => "css.php?stylesheet=" . (int)$new_sid), "sid = '" . (int)$new_sid . "'", 1);
+        $css_was_changed = true;
+    }
+
+    // Nur wenn das CSS erstellt oder geändert wurde, die Stylesheet-Listen neu erstellen.
+    if ($css_was_changed) {
+        $query_themes_css_rebuild = $db->simple_select("themes", "tid");
+        while ($theme_item_css_rebuild = $db->fetch_array($query_themes_css_rebuild)) {
+            update_theme_stylesheet_list((int)$theme_item_css_rebuild['tid']);
+        }
+    }
+}
+
+
+
+
 // --- ANDERE HELFERFUNKTIONEN ---
 function wetter_sanitize_city_name_for_table($city_name_raw) {
     if (empty($city_name_raw)) return '';
@@ -516,7 +668,7 @@ function wetter_helper_get_weather_data($city_name_original_or_all, $fetch_from_
         $table_name_no_prefix = "wetter_" . $db->escape_string($city_suffix_sanitized);
         if ($fetch_from_archive) $table_name_no_prefix .= "_archiv";
         if (!$db->table_exists($table_name_no_prefix)) continue; 
-        $sql = "SELECT *, '{$db->escape_string($current_city_name_for_query)}' AS city_name FROM ".TABLE_PREFIX.$table_name_no_prefix." WHERE 1=1 {$date_condition_sql} ORDER BY zeitspanne ASC"; 
+        $sql = "SELECT *, '{$db->escape_string($current_city_name_for_query)}' AS city_name FROM ".TABLE_PREFIX.$table_name_no_prefix." WHERE 1=1 {$date_condition_sql} ORDER BY datum ASC, zeitspanne ASC"; 
         $query = $db->query($sql);
         while($row_data = $db->fetch_array($query)) {
             $all_weather_data_collected[] = $row_data; 

@@ -87,6 +87,12 @@ $l['wetter_admin_error_invalid_time_sunrise'] = "Ungültiges Zeitformat für Son
 $l['wetter_admin_error_invalid_time_sunset']  = "Ungültiges Zeitformat für Sonnenuntergang (erwartet HH:MM).";
 $l['wetter_admin_entry_deleted_success']  = "Wettereintrag ID %d aus %s erfolgreich gelöscht.";
 $l['wetter_admin_table_not_exist_for_delete'] = "Tabelle für %s nicht gefunden. Eintrag konnte nicht gelöscht werden.";
+$l['wetter_admin_moonphase_icon_label']             = "Icon-Mondphase";
+$l['wetter_admin_winddirection_icon_label']             = "Icon-Windrichtung";
+$l['wetter_admin_weathercondition_long_desc']          = "Wetterbeschreibung";
+$l['wetter_admin_condition_long_desc'] = "Gib hier eine ausführliche Beschreibung der aktuellen Wetterlage ein. Du kannst auch Zeilenumbrüche für eine bessere Lesbarkeit verwenden, um beispielsweise besondere Ereignisse oder Unwetter genauer zu beschreiben.";
+$l['wetter_admin_moonphase_icon_desc'] = "Wähle hier das passende Icon für die aktuelle Mondphase aus der Icon-Liste aus.";
+$l['wetter_admin_winddirection_icon_desc'] = "Wähle hier das passende Icon für die aktuelle Windrichtung aus der Icon-Liste aus.";
 
 // wetter_edit.php
 $l['wetter_admin_edit_entry_title']     		= "Wettereintrag bearbeiten.";

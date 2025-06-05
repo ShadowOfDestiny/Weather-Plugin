@@ -14,27 +14,26 @@ function wetter_get_all_icon_classes() { // Neuer, eindeutiger Name
 		'wi-night-partly-cloudy','wi-night-rain','wi-night-rain-mix','wi-night-rain-wind','wi-night-showers','wi-night-sleet',
 		'wi-night-sleet-storm','wi-night-snow','wi-night-snow-thunderstorm','wi-night-snow-wind','wi-night-sprinkle',
 		'wi-night-storm-showers','wi-night-thunderstorm','wi-lunar-eclipse','wi-stars','wi-storm-showers','wi-thunderstorm',
-		'wi-night-cloudy-high', 'wi-moon-new','wi-moon-waxing-crescent-1','wi-moon-waxing-crescent-2','wi-moon-waxing-crescent-3',
+		'wi-night-cloudy-high', 
+		
+		// Mondphasen (Beispiele - prüfe die exakten Klassennamen!)
+        'wi-moon-new','wi-moon-waxing-crescent-1','wi-moon-waxing-crescent-2','wi-moon-waxing-crescent-3',
 		'wi-moon-waxing-crescent-4','wi-moon-waxing-crescent-5','wi-moon-waxing-crescent-6','wi-moon-first-quarter',
 		'wi-moon-waxing-gibbous-1','wi-moon-waxing-gibbous-2','wi-moon-waxing-gibbous-3','wi-moon-waxing-gibbous-4',
 		'wi-moon-waxing-gibbous-5','wi-moon-waxing-gibbous-6','wi-moon-full','wi-moon-waning-gibbous-1','wi-moon-waning-gibbous-2',
 		'wi-moon-waning-gibbous-3','wi-moon-waning-gibbous-4','wi-moon-waning-gibbous-5','wi-moon-waning-gibbous-6',
 		'wi-moon-third-quarter','wi-moon-waning-crescent-1','wi-moon-waning-crescent-2','wi-moon-waning-crescent-3',
-        'wi-moon-waning-crescent-4','wi-moon-waning-crescent-5','wi-moon-waning-crescent-6','wi-na'
+        'wi-moon-waning-crescent-4','wi-moon-waning-crescent-5','wi-moon-waning-crescent-6',
+
+        // Windrichtungen (basierend auf deinem Feedback)
+        'wi-from-n',    'wi-from-nne',    'wi-from-ne',    'wi-from-ene',
+        'wi-from-e',    'wi-from-ese',    'wi-from-se',    'wi-from-sse',
+        'wi-from-s',    'wi-from-ssw',    'wi-from-sw',    'wi-from-wsw',
+        'wi-from-w',    'wi-from-wnw',    'wi-from-nw',    'wi-from-nnw',
+
+        'wi-na' // Wichtig als "Nicht verfügbar" oder Standard
 		);
 	}
-}
-
-// Windrichtungen (aus deiner module_meta.php)
-function wetter_get_wind_directions() {
-    // Hier könntest du später Sprachvariablen verwenden, falls die Bezeichnungen übersetzt werden sollen.
-    return array(
-        "" => "--- Bitte wählen ---", "N" => "Nord (N)", "NNO" => "Nord-Nordost (NNO)", "NO" => "Nordost (NO)",
-        "ONO" => "Ost-Nordost (ONO)", "O" => "Ost (O)", "OSO" => "Ost-Südost (OSO)", "SO" => "Südost (SO)",
-        "SSO" => "Süd-Südost (SSO)", "S" => "Süd (S)", "SSW" => "Süd-Südwest (SSW)", "SW" => "Südwest (SW)",
-        "WSW" => "West-Südwest (WSW)", "W" => "West (W)", "WNW" => "West-Nordwest (WNW)", "NW" => "Nordwest (NW)",
-        "NNW" => "Nord-Nordwest (NNW)", "Windstill" => "Windstill", "Variabel" => "Variabel"
-    );
 }
 
 global $lang;
