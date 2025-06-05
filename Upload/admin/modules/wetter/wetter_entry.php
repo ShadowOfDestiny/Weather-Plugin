@@ -115,24 +115,37 @@ if ($mybb->request_method == "post" && $mybb->get_input('submit_wetter_entry')) 
 
 // --- ICON PICKER HTML GENERIERUNG (angepasst für Wind-Icons) ---
 function wetter_generate_icon_picker_html($field_name, $current_value, $preview_font_size = '1.8em') {
-    global $form, $lang;
+    global $form, $lang; // Stelle sicher, dass $lang hier verfügbar ist
 
     if (empty($current_value)) {
         $current_value = 'wi-na';
     }
     $current_value_escaped = htmlspecialchars($current_value);
-    $display_classes_for_preview = $current_value_escaped; // Standard für die meisten Icons
+    
+    // Standardmäßig ist der Typ 'default' und die Anzeigeklassen sind der reine Icon-Wert
+    $display_classes_for_preview = $current_value_escaped; 
+    $icon_type_for_js = 'default'; // WICHTIG: Initialisieren als 'default'
 
     // Spezifische Behandlung für die Windrichtungs-VORSCHAU
-    // $current_value enthält hier die spezifische Richtungsklasse, z.B. "wi-towards-n"
-    if ($field_name == 'windrichtung' && $current_value_escaped != 'wi-na') {
-        if (strpos($current_value_escaped, 'wi-towards-') === 0 || strpos($current_value_escaped, 'wi-from-') === 0) {
-            $display_classes_for_preview = 'wi-wind ' . $current_value_escaped; // Füge 'wi-wind ' davor ein
+    if ($field_name == 'windrichtung') { // Prüfe, ob es das Windrichtungsfeld ist
+        if ($current_value_escaped != 'wi-na' && (strpos($current_value_escaped, 'wi-towards-') === 0 || strpos($current_value_escaped, 'wi-from-') === 0)) {
+            // Nur wenn es eine spezifische Wind-Klasse ist (nicht 'wi-na')
+            $display_classes_for_preview = 'wi-wind ' . $current_value_escaped; 
+            $icon_type_for_js = 'wind'; // WICHTIG: Setze auf 'wind' für Wind-Icons!
+        } else if ($current_value_escaped == 'wi-na') {
+            // Für wi-na im Windfeld bleibt der Typ 'default' (oder 'wind', aber das JS behandelt wi-na ohnehin speziell)
+            // und display_classes_for_preview ist 'wi-na', was korrekt ist.
+            // $icon_type_for_js kann hier 'wind' bleiben, wenn das JS 'wi-na' separat behandelt.
+            // Zur Sicherheit und Klarheit für JS, dass es ein Windfeld ist:
+            $icon_type_for_js = 'wind';
         }
     }
+    // Hier könntest Du später weitere 'else if ($field_name == 'anderer_typ')' für andere spezielle Icon-Typen einfügen,
+    // die eine andere $icon_type_for_js benötigen würden.
 
     $picker_html = $form->generate_hidden_field($field_name, $current_value_escaped, array('id' => $field_name . '_input'));
-    $picker_html .= "<div id=\"{$field_name}_preview\" class=\"wetter-icon-preview-box\" style=\"font-size: {$preview_font_size}; display: inline-block; vertical-align: middle; text-align: center; border: 1px solid #ccc; padding: 5px; min-width: 40px; line-height: 1;\"><i class=\"wi {$display_classes_for_preview}\"></i></div>";
+    // Hier wird $icon_type_for_js verwendet, um data-icon-type zu setzen:
+    $picker_html .= "<div id=\"{$field_name}_preview\" class=\"wetter-icon-preview-box\" data-icon-type=\"{$icon_type_for_js}\" style=\"font-size: {$preview_font_size}; display: inline-block; vertical-align: middle; text-align: center; border: 1px solid #ccc; padding: 5px; min-width: 40px; line-height: 1;\"><i class=\"wi {$display_classes_for_preview}\"></i></div>";
     $picker_html .= "<input type=\"button\" class=\"button open_icon_picker_button\" data-target-input=\"{$field_name}_input\" data-target-preview=\"{$field_name}_preview\" value=\"" . ($lang->wetter_admin_select_icon_button ?: "Icon auswählen") . "\" style=\"margin-left:10px;\" />";
     return $picker_html;
 }

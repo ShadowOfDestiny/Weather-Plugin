@@ -53,16 +53,18 @@ if (!function_exists('wetter_generate_icon_picker_html_edit')) {
         }
         $current_value_escaped = htmlspecialchars($current_value);
         $display_classes_for_preview = $current_value_escaped; // Standard
+        $icon_type_for_js = 'default'; // Für das data-Attribut
 
         // Spezifische Behandlung für die Windrichtungs-VORSCHAU
         if ($field_name == 'windrichtung' && $current_value_escaped != 'wi-na') {
             if (strpos($current_value_escaped, 'wi-towards-') === 0 || strpos($current_value_escaped, 'wi-from-') === 0) {
                 $display_classes_for_preview = 'wi-wind ' . $current_value_escaped;
+                $icon_type_for_js = 'wind'; // Setze Typ für JS
             }
         }
 
         $picker_html = $form->generate_hidden_field($field_name, $current_value_escaped, array('id' => $field_name . '_input'));
-        $picker_html .= "<div id=\"{$field_name}_preview\" class=\"wetter-icon-preview-box\" style=\"font-size: {$preview_font_size}; display: inline-block; vertical-align: middle; text-align: center; border: 1px solid #ccc; padding: 5px; min-width: 40px; line-height: 1;\"><i class=\"wi {$display_classes_for_preview}\"></i></div>";
+        $picker_html .= "<div id=\"{$field_name}_preview\" class=\"wetter-icon-preview-box\" data-icon-type=\"{$icon_type_for_js}\" style=\"font-size: {$preview_font_size}; display: inline-block; vertical-align: middle; text-align: center; border: 1px solid #ccc; padding: 5px; min-width: 40px; line-height: 1;\"><i class=\"wi {$display_classes_for_preview}\"></i></div>";
         $picker_html .= "<input type=\"button\" class=\"button open_icon_picker_button\" data-target-input=\"{$field_name}_input\" data-target-preview=\"{$field_name}_preview\" value=\"" . ($lang->wetter_admin_select_icon_button ?: "Icon auswählen") . "\" style=\"margin-left:10px;\" />";
         return $picker_html;
     }
@@ -233,11 +235,9 @@ if (function_exists('wetter_get_all_icon_classes')) {
 }
 $icon_picker_items_html = '';
 foreach ($all_icons_for_picker as $icon_class_item) {
-    // $icon_class_item ist der Wert aus Deiner Liste (z.B. 'wi-day-sunny' oder 'wi-towards-n')
-    $data_icon_class = htmlspecialchars($icon_class_item); // Dieser Wert wird gespeichert (z.B. 'wi-towards-n' für Wind)
-    $display_classes_in_modal = $data_icon_class; // Standard für normale Icons (z.B. 'wi-day-sunny')
+    $data_icon_class = htmlspecialchars($icon_class_item);
+    $display_classes_in_modal = $data_icon_class; 
 
-    // Spezifische Behandlung für Windrichtungs-Klassen im Modal
     if (strpos($icon_class_item, 'wi-towards-') === 0 || strpos($icon_class_item, 'wi-from-') === 0) {
         $display_classes_in_modal = 'wi-wind ' . $data_icon_class;
     }
