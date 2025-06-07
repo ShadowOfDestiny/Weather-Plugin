@@ -438,84 +438,93 @@ $headerinclude .= $javascript_for_weather;
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-####  2. Anpassung der inplayscenes_editpost()
+####  2. Anpassung der inplayscenes_editpost() in inplayscenes_misc()
 
 * **Suche**
     ```php
-// eval("\$newthread_inplayscenes = ...`);
-    eval("\$edit_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
-}
+    // SZENEN-INFOS BEARBEITEN
+    if($mybb->input['action'] == "inplayscenes_edit"){
     ```
 
-* **Füge darüber ein**
+* **füge darunter ein**
 
     ```php
-global $headerinclude;
-$javascript_for_weather = <<<EOT
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function() {
-    const dateInput = document.querySelector('input[name="date"]');
-    const wetterSelect = document.querySelector('select[name="wetter"]'); 
+        // ******** START: DIESEN BLOCK HINZUFÜGEN (INKLUSIVE DER KORREKTUR) ********
+        global $headerinclude;
+        // WICHTIG: Wir verwenden jetzt <<<'EOT' (mit einfachen Anführungszeichen), um PHP zu sagen,
+        // dass es den Inhalt nicht verarbeiten soll. Das behebt den "Fatal error".
+        $javascript_for_weather = <<<'EOT'
+        <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            const dateInput = document.querySelector('input[name="date"]');
+            const wetterSelect = document.querySelector('select[name="wetter"]'); 
 
-    if (dateInput && wetterSelect) {
-        // Den gespeicherten Wert aus unserem neuen data-Attribut auslesen
-        const savedWetterValue = wetterSelect.dataset.savedValue;
+            if (dateInput && wetterSelect) {
+                // Den gespeicherten Wert aus unserem data-Attribut auslesen
+                const savedWetterValue = wetterSelect.dataset.savedValue;
 
-        dateInput.addEventListener('change', function() {
-            const selectedDate = this.value;
-            wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
-            wetterSelect.disabled = true;
+                dateInput.addEventListener('change', function() {
+                    const selectedDate = this.value;
+                    wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
+                    wetterSelect.disabled = true;
 
-            if (selectedDate) {
-                fetch('ajax_wetter.php?date=' + selectedDate)
-                    .then(response => response.json())
-                    .then(data => {
-                        wetterSelect.innerHTML = ''; 
-                        if (data.status === 'success' && data.data.length > 0) {
-                            wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
-                            data.data.forEach(item => {
-                                const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
-                                const optionValue = JSON.stringify(item); 
-                                wetterSelect.add(new Option(optionText, optionValue));
-                            });
-
-                            // *** NEU: Gespeicherten Wert wieder auswählen ***
-                            if (savedWetterValue) {
-                                for (let i = 0; i < wetterSelect.options.length; i++) {
-                                    if (wetterSelect.options[i].value === savedWetterValue) {
-                                        wetterSelect.options[i].selected = true;
-                                        break;
+                    if (selectedDate) {
+                        fetch('ajax_wetter.php?date=' + selectedDate)
+                            .then(response => response.json())
+                            .then(data => {
+                                wetterSelect.innerHTML = ''; 
+                                if (data.status === 'success' && data.data.length > 0) {
+                                    wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
+                                    
+                                    let savedDataObject = null;
+                                    if (savedWetterValue) {
+                                        try {
+                                            savedDataObject = JSON.parse(savedWetterValue);
+                                        } catch(e) { console.error("Fehler beim Parsen des gespeicherten Wetterwerts:", e); }
                                     }
+                                    
+                                    data.data.forEach(item => {
+                                        // Diese Zeile verursacht den Fehler, weil PHP `${item.stadt}` als Variable ansieht.
+                                        // Die neue EOT-Syntax behebt das.
+                                        const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
+                                        const optionValue = JSON.stringify(item); 
+                                        const optionElement = new Option(optionText, optionValue);
+
+                                        if (savedDataObject && item.id == savedDataObject.id) {
+                                            optionElement.selected = true;
+                                        }
+
+                                        wetterSelect.add(optionElement);
+                                    });
+                                    
+                                } else {
+                                     wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
                                 }
-                            }
-                            
-                        } else {
-                             wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
-                        }
-                        wetterSelect.disabled = false;
-                    })
-                    .catch(error => {
-                        console.error('Fehler beim Abrufen der Wetterdaten:', error);
-                        wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
-                        wetterSelect.disabled = false;
-                    });
-            } else {
-                wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-                wetterSelect.disabled = true;
+                                wetterSelect.disabled = false;
+                            })
+                            .catch(error => {
+                                console.error('Fehler beim Abrufen der Wetterdaten:', error);
+                                wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
+                                wetterSelect.disabled = false;
+                            });
+                    } else {
+                        wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                        wetterSelect.disabled = true;
+                    }
+                });
+                
+                if(dateInput.value) {
+                    dateInput.dispatchEvent(new Event('change'));
+                } else {
+                    wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                    wetterSelect.disabled = true;
+                }
             }
         });
-        
-        if(dateInput.value) {
-            dateInput.dispatchEvent(new Event('change'));
-        } else {
-            wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-            wetterSelect.disabled = true;
-        }
-    }
-});
-</script>
+        </script>
 EOT;
-$headerinclude .= $javascript_for_weather;
+        $headerinclude .= $javascript_for_weather;
+        // ******** ENDE DES HINZUGEFÜGTEN BLOCKS ********
     ```
 
 #### 3. Funktion `inplayscenes_forumdisplay_thread()` anpassen
