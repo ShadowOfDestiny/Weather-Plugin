@@ -515,7 +515,86 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     $post['formatted_wetter_field'] = '';
 ```	
 
-#### 5. Postbit anpassen (Optional)
+#### 5. inplayscenes_editpost anpassen
+
+* **Suche:**
+
+```
+// BEARBEITEN - ANZEIGE
+function inplayscenes_editpost() {
+
+    global $templates, $mybb, $lang, $forum, $db, $thread, $pid, $post_errors, $edit_inplayscenes;
+```	
+
+* **Füge danach ein:**
+
+```
+// ******** START: DIESEN BLOCK HINZUFÜGEN ********
+    global $headerinclude;
+    $javascript_for_weather = <<<EOT
+    <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateInput = document.querySelector('input[name="date"]');
+        const wetterSelect = document.querySelector('select[name="wetter"]'); 
+
+        if (dateInput && wetterSelect) {
+            dateInput.addEventListener('change', function() {
+                const selectedDate = this.value;
+                wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
+                wetterSelect.disabled = true;
+
+                if (selectedDate) {
+                    fetch('ajax_wetter.php?date=' + selectedDate)
+                        .then(response => response.json())
+                        .then(data => {
+                            wetterSelect.innerHTML = ''; 
+                            if (data.status === 'success' && data.data.length > 0) {
+                                wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
+                                data.data.forEach(item => {
+                                    const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
+                                    const optionValue = JSON.stringify(item); 
+                                    wetterSelect.add(new Option(optionText, optionValue));
+                                });
+                            } else {
+                                 wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
+                            }
+                            wetterSelect.disabled = false;
+                        })
+                        .catch(error => {
+                            console.error('Fehler beim Abrufen der Wetterdaten:', error);
+                            wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
+                            wetterSelect.disabled = false;
+                        });
+                } else {
+                    wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                    wetterSelect.disabled = true;
+                }
+            });
+
+            if(dateInput.value) {
+                dateInput.dispatchEvent(new Event('change'));
+            } else {
+                wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                wetterSelect.disabled = true;
+            }
+        }
+    });
+    </script>
+    EOT;
+    $headerinclude .= $javascript_for_weather;
+    // ******** ENDE DES BLOCKS ********
+```	
+
+### Schritt 6: Templates anpassen
+
+Füge die jeweils angegebene Variable in einer neuen Zeile **direkt nach** `{$inplayscenesfields}` in den folgenden Templates ein:
+
+* `inplayscenes_showthread` -> Füge hinzu: `{$formatted_wetter_showthread}`
+* `inplayscenes_forumdisplay` -> Füge hinzu: `{$formatted_wetter_forumdisplay}`
+* `inplayscenes_overview_scene` -> Füge hinzu: `{$formatted_wetter_overview}`
+* `inplayscenes_postbit` (falls genutzt) -> Füge hinzu: `{$post['formatted_wetter_field']}`
+
+#### 7. Postbit anpassen (Optional)
 
 Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inplayscenes_postbit`), führe auch hier die Änderung durch.
 
@@ -579,12 +658,3 @@ Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inp
     ```
 
 ---
-
-### Schritt 6: Templates anpassen
-
-Füge die jeweils angegebene Variable in einer neuen Zeile **direkt nach** `{$inplayscenesfields}` in den folgenden Templates ein:
-
-* `inplayscenes_showthread` -> Füge hinzu: `{$formatted_wetter_showthread}`
-* `inplayscenes_forumdisplay` -> Füge hinzu: `{$formatted_wetter_forumdisplay}`
-* `inplayscenes_overview_scene` -> Füge hinzu: `{$formatted_wetter_overview}`
-* `inplayscenes_postbit` (falls genutzt) -> Füge hinzu: `{$post['formatted_wetter_field']}`
