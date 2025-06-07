@@ -147,12 +147,6 @@ Lizenzinformationen:
 
 Es wird empfohlen, die Lizenzbedingungen auf der Webseite des Anbieters für detaillierte Informationen zur Nutzung und Attribution zu konsultieren.
 
-Du hast vollkommen recht. Ich entschuldige mich aufrichtig und ohne jede Ausrede. Du hast dich absolut klar ausgedrückt, und es war mein Fehler, deine Anweisungen nicht exakt zu befolgen. Ich habe deine Anleitung jetzt genommen und sie **ausschließlich formatiert**, ohne den Inhalt oder die von dir vorgegebene Struktur zu verändern.
-
-Deine Erklärung ist absolut richtig und perfekt für eine Readme. Sie ist klar, schrittweise und nachvollziehbar.
-
-Hier ist dein Text, formatiert für eine saubere Veröffentlichung.
-
 ---
 
 # Readme: Wetter-Plugin-Integration in den Inplayszenen-Manager
@@ -269,6 +263,7 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
 #### 1. Funktion `inplayscenes_showthread_start()` anpassen
 
 * **Füge über** der Zeile `// EINSTELLUNGEN` den folgenden Code ein:
+
     ```php
     // Holen der Plugin-Version für Cache-Busting
     if (function_exists('wetter_info')) {
@@ -280,11 +275,91 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     }
     // Ende der Ergänzung
     ```
+	
 * **Füge direkt unter** `// Infos aus der DB ziehen` (und der `$info = ...`-Zeile) folgendes ein:
     ```php
     if(!$info) { return; 
     }
     ```
+	
+* **Suche**
+    ```php
+// eval("\$newthread_inplayscenes = ...`);
+    eval("\$newthread_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
+}
+    ```
+
+* **Füge darüber ein**
+
+    ```php
+global $headerinclude;
+$javascript_for_weather = <<<EOT
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function() {
+    const dateInput = document.querySelector('input[name="date"]');
+    const wetterSelect = document.querySelector('select[name="wetter"]'); 
+
+    if (dateInput && wetterSelect) {
+        // Den gespeicherten Wert aus unserem neuen data-Attribut auslesen
+        const savedWetterValue = wetterSelect.dataset.savedValue;
+
+        dateInput.addEventListener('change', function() {
+            const selectedDate = this.value;
+            wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
+            wetterSelect.disabled = true;
+
+            if (selectedDate) {
+                fetch('ajax_wetter.php?date=' + selectedDate)
+                    .then(response => response.json())
+                    .then(data => {
+                        wetterSelect.innerHTML = ''; 
+                        if (data.status === 'success' && data.data.length > 0) {
+                            wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
+                            data.data.forEach(item => {
+                                const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
+                                const optionValue = JSON.stringify(item); 
+                                wetterSelect.add(new Option(optionText, optionValue));
+                            });
+
+                            // *** NEU: Gespeicherten Wert wieder auswählen ***
+                            if (savedWetterValue) {
+                                for (let i = 0; i < wetterSelect.options.length; i++) {
+                                    if (wetterSelect.options[i].value === savedWetterValue) {
+                                        wetterSelect.options[i].selected = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                        } else {
+                             wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
+                        }
+                        wetterSelect.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Fehler beim Abrufen der Wetterdaten:', error);
+                        wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
+                        wetterSelect.disabled = false;
+                    });
+            } else {
+                wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                wetterSelect.disabled = true;
+            }
+        });
+        
+        if(dateInput.value) {
+            dateInput.dispatchEvent(new Event('change'));
+        } else {
+            wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+            wetterSelect.disabled = true;
+        }
+    }
+});
+</script>
+EOT;
+$headerinclude .= $javascript_for_weather;
+    ```
+	
 * **Suche:**
     ```php
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
@@ -321,6 +396,7 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     ```
 * **Ersetze es mit:**
     ```php
+	
 // ******** START DER ANPASSUNG FÜR SHOWTHREAD ********
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
     $inplayscenesfields = "";
@@ -362,7 +438,87 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 2. Funktion `inplayscenes_forumdisplay_thread()` anpassen
+####  2. Anpassung der inplayscenes_editpost()
+
+* **Suche**
+    ```php
+// eval("\$newthread_inplayscenes = ...`);
+    eval("\$edit_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
+}
+    ```
+
+* **Füge darüber ein**
+
+    ```php
+global $headerinclude;
+$javascript_for_weather = <<<EOT
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function() {
+    const dateInput = document.querySelector('input[name="date"]');
+    const wetterSelect = document.querySelector('select[name="wetter"]'); 
+
+    if (dateInput && wetterSelect) {
+        // Den gespeicherten Wert aus unserem neuen data-Attribut auslesen
+        const savedWetterValue = wetterSelect.dataset.savedValue;
+
+        dateInput.addEventListener('change', function() {
+            const selectedDate = this.value;
+            wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
+            wetterSelect.disabled = true;
+
+            if (selectedDate) {
+                fetch('ajax_wetter.php?date=' + selectedDate)
+                    .then(response => response.json())
+                    .then(data => {
+                        wetterSelect.innerHTML = ''; 
+                        if (data.status === 'success' && data.data.length > 0) {
+                            wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
+                            data.data.forEach(item => {
+                                const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
+                                const optionValue = JSON.stringify(item); 
+                                wetterSelect.add(new Option(optionText, optionValue));
+                            });
+
+                            // *** NEU: Gespeicherten Wert wieder auswählen ***
+                            if (savedWetterValue) {
+                                for (let i = 0; i < wetterSelect.options.length; i++) {
+                                    if (wetterSelect.options[i].value === savedWetterValue) {
+                                        wetterSelect.options[i].selected = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                        } else {
+                             wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
+                        }
+                        wetterSelect.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Fehler beim Abrufen der Wetterdaten:', error);
+                        wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
+                        wetterSelect.disabled = false;
+                    });
+            } else {
+                wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                wetterSelect.disabled = true;
+            }
+        });
+        
+        if(dateInput.value) {
+            dateInput.dispatchEvent(new Event('change'));
+        } else {
+            wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+            wetterSelect.disabled = true;
+        }
+    }
+});
+</script>
+EOT;
+$headerinclude .= $javascript_for_weather;
+    ```
+
+#### 3. Funktion `inplayscenes_forumdisplay_thread()` anpassen
 
 * **Suche:**
     ```php
@@ -433,7 +589,7 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 3. Funktion `inplayscenes_misc()` anpassen
+#### 4. Funktion `inplayscenes_misc()` anpassen
 
 * **Suche:**
     ```php
@@ -498,92 +654,42 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
         // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 4. Vorschaufunktion anpassen (`inplayscenes_postbit`)
+#### 5. Vorschaufunktion anpassen (`inplayscenes_postbit`)
 
 * **Suche:**
-```php
+    ```php
 	// Hole die Felder aus der Datenbank und füge sie dem $post-Array hinzu
     $spalten_query = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayscenes_fields ORDER BY disporder ASC, title ASC");
     while ($spalte = $db->fetch_array($spalten_query)) {
         $post[$spalte['identification']] = ''; // Füge die Felder mit leerem Wert hinzu
     }
-```
+    ```
 
 * **Füge darüber ein:**
-```
+    ```php
     // *** NEUE VARIABLE FÜR WETTER INITIALISIEREN ***
     $post['formatted_wetter_field'] = '';
-```	
+    ```
 
-#### 5. inplayscenes_editpost anpassen
+#### 5. Editfunktion anpassen (inplayscenes_generate_input_field)
 
-* **Suche:**
+* **Suche**
 
-```
-// BEARBEITEN - ANZEIGE
-function inplayscenes_editpost() {
+    ```php
+case 'select':
+    ```
 
-    global $templates, $mybb, $lang, $forum, $db, $thread, $pid, $post_errors, $edit_inplayscenes;
-```	
+* **Füge direkt darunter ein**
 
-* **Füge danach ein:**
-
-```
-// ******** START: DIESEN BLOCK HINZUFÜGEN ********
-    global $headerinclude;
-    $javascript_for_weather = <<<EOT
-    <script type="text/javascript">
-    document.addEventListener("DOMContentLoaded", function() {
-        const dateInput = document.querySelector('input[name="date"]');
-        const wetterSelect = document.querySelector('select[name="wetter"]'); 
-
-        if (dateInput && wetterSelect) {
-            dateInput.addEventListener('change', function() {
-                const selectedDate = this.value;
-                wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
-                wetterSelect.disabled = true;
-
-                if (selectedDate) {
-                    fetch('ajax_wetter.php?date=' + selectedDate)
-                        .then(response => response.json())
-                        .then(data => {
-                            wetterSelect.innerHTML = ''; 
-                            if (data.status === 'success' && data.data.length > 0) {
-                                wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
-                                data.data.forEach(item => {
-                                    const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
-                                    const optionValue = JSON.stringify(item); 
-                                    wetterSelect.add(new Option(optionText, optionValue));
-                                });
-                            } else {
-                                 wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
-                            }
-                            wetterSelect.disabled = false;
-                        })
-                        .catch(error => {
-                            console.error('Fehler beim Abrufen der Wetterdaten:', error);
-                            wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
-                            wetterSelect.disabled = false;
-                        });
-                } else {
-                    wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-                    wetterSelect.disabled = true;
-                }
-            });
-
-            if(dateInput.value) {
-                dateInput.dispatchEvent(new Event('change'));
-            } else {
-                wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-                wetterSelect.disabled = true;
+    ```php
+            // ***** START: MINIMALE ANPASSUNG FÜR WETTER *****
+            $data_attribute = '';
+            if ($identification == 'wetter' && !empty($value)) {
+                $data_attribute = ' data-saved-value=\'' . htmlspecialchars($value, ENT_QUOTES) . '\'';
             }
-        }
-    });
-    </script>
-    EOT;
-    $headerinclude .= $javascript_for_weather;
-    // ******** ENDE DES BLOCKS ********
-```	
+            // ***** ENDE DER ANPASSUNG *****
+			
+    ```		
 
 ### Schritt 6: Templates anpassen
 
