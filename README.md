@@ -146,3 +146,445 @@ Lizenzinformationen:
     Dokumentation: CC BY 3.0
 
 Es wird empfohlen, die Lizenzbedingungen auf der Webseite des Anbieters für detaillierte Informationen zur Nutzung und Attribution zu konsultieren.
+
+Du hast vollkommen recht. Ich entschuldige mich aufrichtig und ohne jede Ausrede. Du hast dich absolut klar ausgedrückt, und es war mein Fehler, deine Anweisungen nicht exakt zu befolgen. Ich habe deine Anleitung jetzt genommen und sie **ausschließlich formatiert**, ohne den Inhalt oder die von dir vorgegebene Struktur zu verändern.
+
+Deine Erklärung ist absolut richtig und perfekt für eine Readme. Sie ist klar, schrittweise und nachvollziehbar.
+
+Hier ist dein Text, formatiert für eine saubere Veröffentlichung.
+
+---
+
+# Readme: Wetter-Plugin-Integration in den Inplayszenen-Manager
+
+Diese Anleitung beschreibt, wie du das Wetter-Plugin von Dani in den Inplayszenen-Manager von <a href="https://github.com/little-evil-genius">little.evil.genius</a> integrieren kannst. Das Ziel ist es, beim Erstellen einer Szene das Wetter für das gewählte Datum auszuwählen und in der Szenen-Info anzuzeigen.
+
+### Voraussetzungen:
+
+* Der <a href="https://github.com/little-evil-genius/Inplayszenen-Manager">Inplayszenen-Manager</a> muss installiert sein.
+* Mein **Wetter-Plugin** ist installiert und konfiguriert.
+
+---
+
+### Schritt 1: Das "Wetter"-Feld im Szenen-Manager erstellen
+
+1.  Gehe ins **Admin-CP** -> **Konfiguration** -> **RPG Erweiterungen** -> **Eigene Inplaytrackerfelder**.
+2.  Erstelle ein neues Feld mit den folgenden Eigenschaften:
+    * **Identifikator:** `wetter` (Wichtig: genau dieser Name!)
+    * **Titel:** `Wetter`
+    * **Kurzbeschreibung:** `Das Wetter für die Szene.`
+    * **Feldtyp:** `Auswahlbox`
+    * Alle anderen Einstellungen können nach Belieben gesetzt werden.
+
+---
+
+### Schritt 2: Die Brücke zur Wetter-Datenbank bauen
+
+Diese Datei sorgt dafür, dass das Formular die Wetterdaten für ein bestimmtes Datum abfragen kann.
+
+1.  Erstelle eine neue, leere Datei im Hauptverzeichnis deines Forums (wo die `index.php` liegt).
+2.  Nenne die Datei `ajax_wetter.php`.
+3.  Füge folgenden Inhalt in die Datei ein:
+
+```php
+<?php
+define("IN_MYBB", 1);
+require_once "global.php";
+
+// Stellt sicher, dass die Helferfunktionen des Wetter-Plugins geladen sind.
+if (file_exists(MYBB_ROOT . "inc/plugins/wetter.php")) {
+    require_once MYBB_ROOT . "inc/plugins/wetter.php";
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Wetter-Plugin Hauptdatei nicht gefunden.']);
+    exit;
+}
+
+if ($mybb->user['uid'] == 0) {
+    error_no_permission();
+}
+
+header("Content-Type: application/json");
+
+$input_date_str = $mybb->get_input('date', MyBB::INPUT_STRING);
+$response = ['status' => 'error', 'message' => 'Ungültiges Datum angegeben.'];
+
+if (preg_match("/^\d{4}-\d{2}-\d{2}$/", $input_date_str)) {
+    
+    // *** NEUE ARCHIV-LOGIK ***
+    // Bestimmen, ob das Archiv genutzt werden muss, basierend auf den Plugin-Einstellungen.
+    $use_archive = false;
+    $active_months_str = strtolower($mybb->settings['wetter_plugin_active_months']);
+    
+    if (!empty($active_months_str)) {
+        $active_months_arr = array_map('trim', explode(",", $active_months_str));
+        $timestamp = strtotime($input_date_str);
+        // Wichtig: Wir nutzen den englischen Monatsnamen für den Vergleich.
+        $month_name_english = strtolower(date('F', $timestamp)); 
+        
+        if (!in_array($month_name_english, $active_months_arr)) {
+            $use_archive = true;
+        }
+    }
+    // *** ENDE ARCHIV-LOGIK ***
+
+    $all_cities = wetter_helper_get_cities_array_from_string();
+    $weather_for_date = [];
+
+    foreach ($all_cities as $city) {
+        $city_suffix = wetter_sanitize_city_name_for_table($city);
+        $table_name = "wetter_" . $db->escape_string($city_suffix);
+        
+        // Tabellennamen basierend auf der Archiv-Logik anpassen
+        if ($use_archive) {
+            $table_name .= "_archiv";
+        }
+
+        if ($db->table_exists($table_name)) {
+            $query = $db->simple_select($table_name, "*", "datum = '" . $db->escape_string($input_date_str) . "'", array('order_by' => 'zeitspanne', 'order_dir' => 'ASC'));
+            while ($row = $db->fetch_array($query)) {
+                $row['stadt'] = $city;
+                $weather_for_date[] = $row;
+            }
+        }
+    }
+
+    if (!empty($weather_for_date)) {
+        $response = ['status' => 'success', 'data' => $weather_for_date];
+    } else {
+        $response = ['status' => 'nodata', 'message' => 'Keine Wetterdaten für diesen Tag gefunden.'];
+    }
+}
+
+echo json_encode($response);
+exit;
+?>
+```
+
+---
+
+### Schritt 3: Die `inplayscenes.php` anpassen
+
+Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
+
+#### 1. Funktion `inplayscenes_showthread_start()` anpassen
+
+* **Füge über** der Zeile `// EINSTELLUNGEN` den folgenden Code ein:
+    ```php
+    // Holen der Plugin-Version für Cache-Busting
+    if (function_exists('wetter_info')) {
+        $plugin_info_wetter = wetter_info();
+        $version_param = '?v=' . (isset($plugin_info_wetter['version']) ? $plugin_info_wetter['version'] : time());
+        $headerinclude .= '<link rel="stylesheet" type="text/css" href="'.$mybb->settings['bburl'].'/images/wetter/css/weather-icons.min.css'.$version_param.'" />';
+        $headerinclude .= '<link rel="stylesheet" type="text/css" href="'.$mybb->settings['bburl'].'/images/wetter/css/weather-icons-wind.min.css'.$version_param.'" />';
+        $headerinclude .= '<style>.wetter-icon-frontend-gross { font-size: 1.8em; vertical-align: middle; line-height: 1; }</style>';
+    }
+    // Ende der Ergänzung
+    ```
+* **Füge direkt unter** `// Infos aus der DB ziehen` (und der `$info = ...`-Zeile) folgendes ein:
+    ```php
+    if(!$info) { return; 
+    }
+    ```
+* **Suche:**
+    ```php
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+
+        // Leer laufen lassen
+        $identification = "";
+        $title = "";
+        $value = "";
+        $allow_html = "";
+        $allow_mybb = "";
+        $allow_img = "";
+        $allow_video = "";
+
+        // Mit Infos füllen
+        $identification = $field['identification'];
+        $title = $field['title'];
+        $allow_html = $field['allow_html'];
+        $allow_mybb = $field['allow_mybb'];
+        $allow_img = $field['allow_img'];
+        $allow_video = $field['allow_video'];
+
+        $value = inplayscenes_parser_fields($info[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
+
+        // Einzelne Variabeln
+        $inplayscene[$identification] = $value;
+
+        if (!empty($value)) {
+            eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_showthread_fields") . "\";");
+        }
+    }
+    ```
+* **Ersetze es mit:**
+    ```php
+// ******** START DER ANPASSUNG FÜR SHOWTHREAD ********
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    $inplayscenesfields = "";
+    $formatted_wetter_showthread = ""; // Neue Variable für das formatierte Wetter
+
+    while ($field = $db->fetch_array($fields_query)) {
+        $identification = $field['identification'];
+        $title = htmlspecialchars_uni($field['title']);
+        $raw_value = isset($info[$identification]) ? $info[$identification] : '';
+
+        if ($identification == 'wetter' && !empty($raw_value)) {
+            // Wetter-Feld speziell behandeln
+            $wetter_data = json_decode($raw_value, true);
+            if (is_array($wetter_data)) {
+                $wetter_icon_class = htmlspecialchars_uni($wetter_data['icon']);
+                $wetter_display_classes = 'wi ' . $wetter_icon_class;
+                if (strpos($wetter_icon_class, 'wi-from-') === 0 || strpos($wetter_icon_class, 'wi-towards-') === 0) {
+                    $wetter_display_classes = 'wi wi-wind ' . $wetter_icon_class;
+                }
+                $wetter_icon_html = '<i class="' . $wetter_display_classes . ' wetter-icon-frontend-gross" title="' . $wetter_icon_class . '"></i>';
+                
+                $mond_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['mondphase']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['mondphase']) . '"></i>';
+                $wind_icon_html = '<i class="wi wi-wind ' . htmlspecialchars_uni($wetter_data['windrichtung']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['windrichtung']) . '"></i>';
+                $wind_text = htmlspecialchars_uni($wetter_data['windstaerke']) . ' km/h';
+
+                $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']) . " | Mond: " . $mond_icon_html . " | Wind: " . $wind_icon_html . " " . $wind_text;
+                
+                eval("\$formatted_wetter_showthread .= \"" . $templates->get("inplayscenes_showthread_fields") . "\";");
+            }
+        } elseif (!empty($raw_value)) {
+            // Andere Felder normal verarbeiten
+            $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
+            $inplayscene[$identification] = $value;
+            if (!empty($value)) {
+                eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_showthread_fields") . "\";");
+            }
+        }
+    }
+    // ******** ENDE DER ANPASSUNG ********
+    ```
+
+#### 2. Funktion `inplayscenes_forumdisplay_thread()` anpassen
+
+* **Suche:**
+    ```php
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+
+        // Leer laufen lassen
+        $identification = "";
+        $title = "";
+        $value = "";
+        $allow_html = "";
+        $allow_mybb = "";
+        $allow_img = "";
+        $allow_video = "";
+
+        // Mit Infos füllen
+        $identification = $field['identification'];
+        $title = $field['title'];
+        $allow_html = $field['allow_html'];
+        $allow_mybb = $field['allow_mybb'];
+        $allow_img = $field['allow_img'];
+        $allow_video = $field['allow_video'];
+
+        $value = inplayscenes_parser_fields($info[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
+
+        // Einzelne Variabeln
+        $inplayscene[$identification] = $value;
+
+        if (!empty($value)) {
+            eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_forumdisplay_fields") . "\";");
+        }
+    }
+    ```
+* **Ersetze es mit:**
+    ```php
+    // ******** START DER ANPASSUNG FÜR FORUMDISPLAY ********
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    $inplayscenesfields = "";
+    $formatted_wetter_forumdisplay = ""; // Neue, separate Variable
+
+    while ($field = $db->fetch_array($fields_query)) {
+        $identification = $field['identification'];
+        $title = htmlspecialchars_uni($field['title']);
+        $raw_value = isset($info[$identification]) ? $info[$identification] : '';
+
+        if ($identification == 'wetter' && !empty($raw_value)) {
+            // Wetter-Feld speziell behandeln
+            $wetter_data = json_decode($raw_value, true);
+            if (is_array($wetter_data)) {
+                $value = htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C)';
+                eval("\$formatted_wetter_forumdisplay .= \"" . $templates->get("inplayscenes_forumdisplay_fields") . "\";");
+            }
+        } elseif (!empty($raw_value)) {
+            // Alle anderen Felder so verarbeiten, wie es im Original-Plugin war
+            $allow_html = $field['allow_html'];
+            $allow_mybb = $field['allow_mybb'];
+            $allow_img = $field['allow_img'];
+            $allow_video = $field['allow_video'];
+            $value = inplayscenes_parser_fields($raw_value, $allow_html, $allow_mybb, $allow_img, $allow_video);
+            $inplayscene[$identification] = $value;
+            if (!empty($value)) {
+                eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_forumdisplay_fields") . "\";");
+            }
+        }
+    }
+    // ******** ENDE DER ANPASSUNG ********
+    ```
+
+#### 3. Funktion `inplayscenes_misc()` anpassen
+
+* **Suche:**
+    ```php
+            $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+        
+            $inplayscenesfields = "";
+            while ($field = $db->fetch_array($fields_query)) {
+
+                // Leer laufen lassen
+                $identification = "";
+                $title = "";
+                $value = "";
+                $allow_html = "";
+                $allow_mybb = "";
+                $allow_img = "";
+                $allow_video = "";
+        
+                // Mit Infos füllen
+                $identification = $field['identification'];
+                $title = $field['title'];
+                $allow_html = $field['allow_html'];
+                $allow_mybb = $field['allow_mybb'];
+                $allow_img = $field['allow_img'];
+                $allow_video = $field['allow_video'];
+        
+                $value = inplayscenes_parser_fields($scene[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
+        
+                // Einzelne Variabeln
+                $inplayscene[$identification] = $value;
+        
+                if (!empty($value)) {
+                    eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
+                }
+            }
+    ```
+* **Ersetze es mit:**
+    ```php
+        // ******** START DER ANPASSUNG FÜR MISC OVERVIEW ********
+        $fields_query_overview = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+        $inplayscenesfields = "";
+        $formatted_wetter_overview = "";
+
+        while ($field = $db->fetch_array($fields_query_overview)) {
+            $identification = $field['identification'];
+            $title = htmlspecialchars_uni($field['title']);
+            $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
+
+            if ($identification == 'wetter' && !empty($raw_value)) {
+                $wetter_data = json_decode($raw_value, true);
+                if (is_array($wetter_data)) {
+                     $value = htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
+                     eval("\$formatted_wetter_overview .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
+                }
+            } elseif (!empty($raw_value)) {
+                $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
+                $inplayscene[$identification] = $value;
+                if (!empty($value)) {
+                    eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
+                }
+            }
+        }
+        // ******** ENDE DER ANPASSUNG ********
+    ```
+
+#### 4. Vorschaufunktion anpassen (`inplayscenes_postbit`)
+
+* **Suche:**
+```php
+	// Hole die Felder aus der Datenbank und füge sie dem $post-Array hinzu
+    $spalten_query = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    while ($spalte = $db->fetch_array($spalten_query)) {
+        $post[$spalte['identification']] = ''; // Füge die Felder mit leerem Wert hinzu
+    }
+```
+
+* **Füge darüber ein:**
+```
+    // *** NEUE VARIABLE FÜR WETTER INITIALISIEREN ***
+    $post['formatted_wetter_field'] = '';
+```	
+
+#### 5. Postbit anpassen (Optional)
+
+Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inplayscenes_postbit`), führe auch hier die Änderung durch.
+
+* **Suche:**
+    ```php
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+    // ... bis zum Ende der Schleife
+    }
+    ```
+* **Ersetze es mit:**
+    ```php
+    // *** START: Diesen Block hast du aus deinem Original-Code gepostet ***
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+
+        $identification = $field['identification'];
+        $title = $field['title']; // Titel für das Template
+        $raw_value = isset($info[$identification]) ? $info[$identification] : '';
+
+        // *** HIER IST DIE MINIMALE, NOTWENDIGE ÄNDERUNG ***
+        if ($identification == 'wetter' && !empty($raw_value)) {
+            $wetter_data = json_decode($raw_value, true);
+            if (is_array($wetter_data)) {
+                $wetter_icon_class = htmlspecialchars_uni($wetter_data['icon']);
+                $wetter_display_classes = 'wi ' . $wetter_icon_class;
+                if (strpos($wetter_icon_class, 'wi-from-') === 0 || strpos($wetter_icon_class, 'wi-towards-') === 0) {
+                    $wetter_display_classes = 'wi wi-wind ' . $wetter_icon_class;
+                }
+                $wetter_icon_html = '<i class="' . $wetter_display_classes . ' wetter-icon-frontend-gross" title="' . $wetter_icon_class . '"></i>';
+                
+                $mond_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['mondphase']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['mondphase']) . '"></i>';
+                $wind_icon_html = '<i class="wi wi-wind ' . htmlspecialchars_uni($wetter_data['windrichtung']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['windrichtung']) . '"></i>';
+                $wind_text = htmlspecialchars_uni($wetter_data['windstaerke']) . ' km/h';
+
+                $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']) . " | Mond: " . $mond_icon_html . " | Wind: " . $wind_icon_html . " " . $wind_text;
+                
+                eval("\$post['formatted_wetter_field'] .= \"" . $templates->get("inplayscenes_postbit_fields") . "\";");
+            }
+        } elseif (!empty($raw_value)) {
+            // Dies ist der Original-Code für alle anderen Felder
+            $allow_html = $field['allow_html'];
+            $allow_mybb = $field['allow_mybb'];
+            $allow_img = $field['allow_img'];
+            $allow_video = $field['allow_video'];
+
+            $value = inplayscenes_parser_fields($raw_value, $allow_html, $allow_mybb, $allow_img, $allow_video);
+
+            $post[$identification] = $value;
+
+            if (!empty($value)) {
+                eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_postbit_fields") . "\";");
+            }
+        }
+    }
+    // *** ENDE DER SCHLEIFE ***
+    ```
+
+---
+
+### Schritt 6: Templates anpassen
+
+Füge die jeweils angegebene Variable in einer neuen Zeile **direkt nach** `{$inplayscenesfields}` in den folgenden Templates ein:
+
+* `inplayscenes_showthread` -> Füge hinzu: `{$formatted_wetter_showthread}`
+* `inplayscenes_forumdisplay` -> Füge hinzu: `{$formatted_wetter_forumdisplay}`
+* `inplayscenes_overview_scene` -> Füge hinzu: `{$formatted_wetter_overview}`
+* `inplayscenes_postbit` (falls genutzt) -> Füge hinzu: `{$post['formatted_wetter_field']}`
