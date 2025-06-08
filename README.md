@@ -286,7 +286,7 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     ```php
 // eval("\$newthread_inplayscenes = ...`);
     eval("\$newthread_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
-}
+	}
     ```
 
 * **Füge darüber ein**
