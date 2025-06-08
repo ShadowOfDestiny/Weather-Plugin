@@ -284,7 +284,6 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
 	
 * **Suche**
     ```php
-// eval("\$newthread_inplayscenes = ...`);
     eval("\$newthread_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
 	}
     ```
@@ -397,7 +396,7 @@ $headerinclude .= $javascript_for_weather;
 * **Ersetze es mit:**
     ```php
 	
-// ******** START DER ANPASSUNG FÜR SHOWTHREAD ********
+/ ******** START DER ANPASSUNG FÜR SHOWTHREAD ********/
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
     $inplayscenesfields = "";
     $formatted_wetter_showthread = ""; // Neue Variable für das formatierte Wetter
