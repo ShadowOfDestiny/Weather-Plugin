@@ -275,90 +275,90 @@ Als Nächstes öffne die Datei `/inc/plugins/inplayscenes.php`.
     }
     // Ende der Ergänzung
     ```
-	
+
 * **Füge direkt unter** `// Infos aus der DB ziehen` (und der `$info = ...`-Zeile) folgendes ein:
     ```php
     if(!$info) { return; 
     }
     ```
-	
-* **Suche**
+
+* **Suche:**
     ```php
+    // eval("\$newthread_inplayscenes = ...`);
     eval("\$newthread_inplayscenes = \"".$templates->get("inplayscenes_newthread")."\";");
-	}
+    }
     ```
-
-* **Füge darüber ein**
+* **Füge darüber ein:**
 
     ```php
-global $headerinclude;
-$javascript_for_weather = <<<EOT
-<script type="text/javascript">
-document.addEventListener("DOMContentLoaded", function() {
-    const dateInput = document.querySelector('input[name="date"]');
-    const wetterSelect = document.querySelector('select[name="wetter"]'); 
+    global $headerinclude;
+    $javascript_for_weather = <<<EOT
+    <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateInput = document.querySelector('input[name="date"]');
+        const wetterSelect = document.querySelector('select[name="wetter"]'); 
 
-    if (dateInput && wetterSelect) {
-        // Den gespeicherten Wert aus unserem neuen data-Attribut auslesen
-        const savedWetterValue = wetterSelect.dataset.savedValue;
+        if (dateInput && wetterSelect) {
+            // Den gespeicherten Wert aus unserem neuen data-Attribut auslesen
+            const savedWetterValue = wetterSelect.dataset.savedValue;
 
-        dateInput.addEventListener('change', function() {
-            const selectedDate = this.value;
-            wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
-            wetterSelect.disabled = true;
+            dateInput.addEventListener('change', function() {
+                const selectedDate = this.value;
+                wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
+                wetterSelect.disabled = true;
 
-            if (selectedDate) {
-                fetch('ajax_wetter.php?date=' + selectedDate)
-                    .then(response => response.json())
-                    .then(data => {
-                        wetterSelect.innerHTML = ''; 
-                        if (data.status === 'success' && data.data.length > 0) {
-                            wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
-                            data.data.forEach(item => {
-                                const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
-                                const optionValue = JSON.stringify(item); 
-                                wetterSelect.add(new Option(optionText, optionValue));
-                            });
+                if (selectedDate) {
+                    fetch('ajax_wetter.php?date=' + selectedDate)
+                        .then(response => response.json())
+                        .then(data => {
+                            wetterSelect.innerHTML = ''; 
+                            if (data.status === 'success' && data.data.length > 0) {
+                                wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
+                                data.data.forEach(item => {
+                                    const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
+                                    const optionValue = JSON.stringify(item); 
+                                    wetterSelect.add(new Option(optionText, optionValue));
+                                });
 
-                            // *** NEU: Gespeicherten Wert wieder auswählen ***
-                            if (savedWetterValue) {
-                                for (let i = 0; i < wetterSelect.options.length; i++) {
-                                    if (wetterSelect.options[i].value === savedWetterValue) {
-                                        wetterSelect.options[i].selected = true;
-                                        break;
+                                // *** NEU: Gespeicherten Wert wieder auswählen ***
+                                if (savedWetterValue) {
+                                    for (let i = 0; i < wetterSelect.options.length; i++) {
+                                        if (wetterSelect.options[i].value === savedWetterValue) {
+                                            wetterSelect.options[i].selected = true;
+                                            break;
+                                        }
                                     }
                                 }
+                                
+                            } else {
+                                wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
                             }
-                            
-                        } else {
-                             wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
-                        }
-                        wetterSelect.disabled = false;
-                    })
-                    .catch(error => {
-                        console.error('Fehler beim Abrufen der Wetterdaten:', error);
-                        wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
-                        wetterSelect.disabled = false;
-                    });
+                            wetterSelect.disabled = false;
+                        })
+                        .catch(error => {
+                            console.error('Fehler beim Abrufen der Wetterdaten:', error);
+                            wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
+                            wetterSelect.disabled = false;
+                        });
+                } else {
+                    wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
+                    wetterSelect.disabled = true;
+                }
+            });
+            
+            if(dateInput.value) {
+                dateInput.dispatchEvent(new Event('change'));
             } else {
                 wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
                 wetterSelect.disabled = true;
             }
-        });
-        
-        if(dateInput.value) {
-            dateInput.dispatchEvent(new Event('change'));
-        } else {
-            wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-            wetterSelect.disabled = true;
         }
-    }
-});
-</script>
-EOT;
-$headerinclude .= $javascript_for_weather;
+    });
+    </script>
+    EOT;
+    $headerinclude .= $javascript_for_weather;
     ```
-	
+
 * **Suche:**
     ```php
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
@@ -367,27 +367,8 @@ $headerinclude .= $javascript_for_weather;
     while ($field = $db->fetch_array($fields_query)) {
 
         // Leer laufen lassen
-        $identification = "";
-        $title = "";
-        $value = "";
-        $allow_html = "";
-        $allow_mybb = "";
-        $allow_img = "";
-        $allow_video = "";
-
-        // Mit Infos füllen
-        $identification = $field['identification'];
-        $title = $field['title'];
-        $allow_html = $field['allow_html'];
-        $allow_mybb = $field['allow_mybb'];
-        $allow_img = $field['allow_img'];
-        $allow_video = $field['allow_video'];
-
-        $value = inplayscenes_parser_fields($info[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
-
-        // Einzelne Variabeln
-        $inplayscene[$identification] = $value;
-
+        // ... (originaler Code)
+        
         if (!empty($value)) {
             eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_showthread_fields") . "\";");
         }
@@ -395,8 +376,7 @@ $headerinclude .= $javascript_for_weather;
     ```
 * **Ersetze es mit:**
     ```php
-	
-/ ******** START DER ANPASSUNG FÜR SHOWTHREAD ********/
+    // ******** START DER ANPASSUNG FÜR SHOWTHREAD ********
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
     $inplayscenesfields = "";
     $formatted_wetter_showthread = ""; // Neue Variable für das formatierte Wetter
@@ -437,165 +417,76 @@ $headerinclude .= $javascript_for_weather;
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-####  2. Anpassung der `inplayscenes_editpost()` in `inplayscenes_misc()`
+#### 2. Anpassung der `inplayscenes_misc()`
 
-* **Suche**
+* **Suche:**
     ```php
     // SZENEN-INFOS BEARBEITEN
     if($mybb->input['action'] == "inplayscenes_edit"){
     ```
 
-* **füge darunter ein**
+* **Füge darunter ein:**
 
     ```php
-        // ******** START: DIESEN BLOCK HINZUFÜGEN (INKLUSIVE DER KORREKTUR) ********
-        global $headerinclude;
-        // WICHTIG: Wir verwenden jetzt <<<'EOT' (mit einfachen Anführungszeichen), um PHP zu sagen,
-        // dass es den Inhalt nicht verarbeiten soll. Das behebt den "Fatal error".
-        $javascript_for_weather = <<<'EOT'
-        <script type="text/javascript">
-        document.addEventListener("DOMContentLoaded", function() {
-            const dateInput = document.querySelector('input[name="date"]');
-            const wetterSelect = document.querySelector('select[name="wetter"]'); 
+    // ******** START: DIESEN BLOCK HINZUFÜGEN (INKLUSIVE DER KORREKTUR) ********
+    global $headerinclude;
+    // WICHTIG: Wir verwenden jetzt <<<'EOT' (mit einfachen Anführungszeichen), um PHP zu sagen,
+    // dass es den Inhalt nicht verarbeiten soll. Das behebt den "Fatal error".
+    $javascript_for_weather = <<<'EOT'
+    <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        // ... (Der JavaScript-Code aus Anhang A) ...
+    });
+    </script>
+    EOT;
+    $headerinclude .= $javascript_for_weather;
+    // ******** ENDE DES HINZUGEFÜGTEN BLOCKS ********
+    ```
 
-            if (dateInput && wetterSelect) {
-                // Den gespeicherten Wert aus unserem data-Attribut auslesen
-                const savedWetterValue = wetterSelect.dataset.savedValue;
+#### 3. Anpassung der Übersicht der eigenen Szenen in `inplayscenes_misc()`
 
-                dateInput.addEventListener('change', function() {
-                    const selectedDate = this.value;
-                    wetterSelect.innerHTML = '<option value="">Wetterdaten werden geladen...</option>';
-                    wetterSelect.disabled = true;
+* **Suche:**
+    ```php
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+        // ... (Originaler Code)
+    }
+    ```
 
-                    if (selectedDate) {
-                        fetch('ajax_wetter.php?date=' + selectedDate)
-                            .then(response => response.json())
-                            .then(data => {
-                                wetterSelect.innerHTML = ''; 
-                                if (data.status === 'success' && data.data.length > 0) {
-                                    wetterSelect.add(new Option('--- Bitte Wetter auswählen ---', ''));
-                                    
-                                    let savedDataObject = null;
-                                    if (savedWetterValue) {
-                                        try {
-                                            savedDataObject = JSON.parse(savedWetterValue);
-                                        } catch(e) { console.error("Fehler beim Parsen des gespeicherten Wetterwerts:", e); }
-                                    }
-                                    
-                                    data.data.forEach(item => {
-                                        // Diese Zeile verursacht den Fehler, weil PHP `${item.stadt}` als Variable ansieht.
-                                        // Die neue EOT-Syntax behebt das.
-                                        const optionText = `${item.stadt}: ${item.zeitspanne} Uhr - ${item.temperatur}°C, ${item.wetterlage}`;
-                                        const optionValue = JSON.stringify(item); 
-                                        const optionElement = new Option(optionText, optionValue);
+* **Ersetze es mit:**
 
-                                        if (savedDataObject && item.id == savedDataObject.id) {
-                                            optionElement.selected = true;
-                                        }
+    ```php
+    // ******** START DER ANPASSUNG ********
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    $inplayscenesfields = "";
+    $formatted_wetter_user_scene = ""; // Neue Variable
 
-                                        wetterSelect.add(optionElement);
-                                    });
-                                    
-                                } else {
-                                     wetterSelect.add(new Option('Keine Wetterdaten für diesen Tag gefunden', ''));
-                                }
-                                wetterSelect.disabled = false;
-                            })
-                            .catch(error => {
-                                console.error('Fehler beim Abrufen der Wetterdaten:', error);
-                                wetterSelect.innerHTML = '<option value="">Fehler beim Laden der Daten</option>';
-                                wetterSelect.disabled = false;
-                            });
-                    } else {
-                        wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-                        wetterSelect.disabled = true;
-                    }
-                });
-                
-                if(dateInput.value) {
-                    dateInput.dispatchEvent(new Event('change'));
-                } else {
-                    wetterSelect.innerHTML = '<option value="">Bitte zuerst ein Datum auswählen</option>';
-                    wetterSelect.disabled = true;
-                }
+    while ($field = $db->fetch_array($fields_query)) {
+        $identification = $field['identification'];
+        $title = htmlspecialchars_uni($field['title']);
+        $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
+
+        if ($identification == 'wetter' && !empty($raw_value)) {
+            // Wetter-Feld speziell behandeln
+            $wetter_data = json_decode($raw_value, true);
+            if (is_array($wetter_data)) {
+                 $wetter_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['icon']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['icon']) . '"></i>';
+                 $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
+                 eval("\$formatted_wetter_user_scene .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
             }
-        });
-        </script>
-EOT;
-        $headerinclude .= $javascript_for_weather;
-        // ******** ENDE DES HINZUGEFÜGTEN BLOCKS ********
-    ```
-	
-####  3. Anpassung der Übersicht der eigenen Szenen `if($mybb->input['action'] == "inplayscenes"){` in `inplayscenes_misc()`
-
-* **Suche**
-    ```php
-                $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
-            
-                $inplayscenesfields = "";
-                while ($field = $db->fetch_array($fields_query)) {
-
-                    // Leer laufen lassen
-                    $identification = "";
-                    $title = "";
-                    $value = "";
-                    $allow_html = "";
-                    $allow_mybb = "";
-                    $allow_img = "";
-                    $allow_video = "";
-            
-                    // Mit Infos füllen
-                    $identification = $field['identification'];
-                    $title = $field['title'];
-                    $allow_html = $field['allow_html'];
-                    $allow_mybb = $field['allow_mybb'];
-                    $allow_img = $field['allow_img'];
-                    $allow_video = $field['allow_video'];
-
-                    $value = inplayscenes_parser_fields($scene[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
-            
-                    // Einzelne Variabeln
-                    $inplayscene[$identification] = $value;
-            
-                    if (!empty($value)) {
-                        eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
-                    }
-                }
+        } elseif (!empty($raw_value)) {
+            // Andere Felder normal verarbeiten
+            $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
+            $inplayscene[$identification] = $value;
+            eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
+        }
+    }
+    // ******** ENDE DER ANPASSUNG ********
     ```
 
-* **Ersetze**
-
-    ```php
-                // ******** START DER ANPASSUNG ********
-                $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
-                $inplayscenesfields = "";
-                $formatted_wetter_user_scene = ""; // Neue Variable
-
-                while ($field = $db->fetch_array($fields_query)) {
-                    $identification = $field['identification'];
-                    $title = htmlspecialchars_uni($field['title']);
-                    $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
-
-                    if ($identification == 'wetter' && !empty($raw_value)) {
-                        // Wetter-Feld speziell behandeln
-                        $wetter_data = json_decode($raw_value, true);
-                        if (is_array($wetter_data)) {
-                             $wetter_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['icon']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['icon']) . '"></i>';
-                             $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
-                             eval("\$formatted_wetter_user_scene .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
-                        }
-                    } elseif (!empty($raw_value)) {
-                        // Andere Felder normal verarbeiten
-                        $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
-                        $inplayscene[$identification] = $value;
-                        eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
-                    }
-                }
-                // ******** ENDE DER ANPASSUNG ********
-    ```
-	
-
-#### 4. Funktion `inplayscenes_forumdisplay_thread()` anpassen
+#### 4. Anpassung der `inplayscenes_forumdisplay_thread()`
 
 * **Suche:**
     ```php
@@ -603,32 +494,7 @@ EOT;
 
     $inplayscenesfields = "";
     while ($field = $db->fetch_array($fields_query)) {
-
-        // Leer laufen lassen
-        $identification = "";
-        $title = "";
-        $value = "";
-        $allow_html = "";
-        $allow_mybb = "";
-        $allow_img = "";
-        $allow_video = "";
-
-        // Mit Infos füllen
-        $identification = $field['identification'];
-        $title = $field['title'];
-        $allow_html = $field['allow_html'];
-        $allow_mybb = $field['allow_mybb'];
-        $allow_img = $field['allow_img'];
-        $allow_video = $field['allow_video'];
-
-        $value = inplayscenes_parser_fields($info[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
-
-        // Einzelne Variabeln
-        $inplayscene[$identification] = $value;
-
-        if (!empty($value)) {
-            eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_forumdisplay_fields") . "\";");
-        }
+        // ... (Originaler Code)
     }
     ```
 * **Ersetze es mit:**
@@ -666,107 +532,61 @@ EOT;
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 5. Funktion `inplayscenes_misc()` anpassen
+#### 5. Anpassung der `inplayscenes_misc()`
 
 * **Suche:**
     ```php
-            $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
-        
-            $inplayscenesfields = "";
-            while ($field = $db->fetch_array($fields_query)) {
-
-                // Leer laufen lassen
-                $identification = "";
-                $title = "";
-                $value = "";
-                $allow_html = "";
-                $allow_mybb = "";
-                $allow_img = "";
-                $allow_video = "";
-        
-                // Mit Infos füllen
-                $identification = $field['identification'];
-                $title = $field['title'];
-                $allow_html = $field['allow_html'];
-                $allow_mybb = $field['allow_mybb'];
-                $allow_img = $field['allow_img'];
-                $allow_video = $field['allow_video'];
-        
-                $value = inplayscenes_parser_fields($scene[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
-        
-                // Einzelne Variabeln
-                $inplayscene[$identification] = $value;
-        
-                if (!empty($value)) {
-                    eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
-                }
-            }
+    $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    
+    $inplayscenesfields = "";
+    while ($field = $db->fetch_array($fields_query)) {
+        // ... (Originaler Code)
+    }
     ```
 * **Ersetze es mit:**
     ```php
-        // ******** START DER ANPASSUNG FÜR MISC OVERVIEW ********
-        $fields_query_overview = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
-        $inplayscenesfields = "";
-        $formatted_wetter_overview = "";
+    // ******** START DER ANPASSUNG FÜR MISC OVERVIEW ********
+    $fields_query_overview = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+    $inplayscenesfields = "";
+    $formatted_wetter_overview = "";
 
-        while ($field = $db->fetch_array($fields_query_overview)) {
-            $identification = $field['identification'];
-            $title = htmlspecialchars_uni($field['title']);
-            $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
+    while ($field = $db->fetch_array($fields_query_overview)) {
+        $identification = $field['identification'];
+        $title = htmlspecialchars_uni($field['title']);
+        $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
 
-            if ($identification == 'wetter' && !empty($raw_value)) {
-                $wetter_data = json_decode($raw_value, true);
-                if (is_array($wetter_data)) {
-                     $value = htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
-                     eval("\$formatted_wetter_overview .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
-                }
-            } elseif (!empty($raw_value)) {
-                $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
-                $inplayscene[$identification] = $value;
-                if (!empty($value)) {
-                    eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
-                }
+        if ($identification == 'wetter' && !empty($raw_value)) {
+            $wetter_data = json_decode($raw_value, true);
+            if (is_array($wetter_data)) {
+                 $value = htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
+                 eval("\$formatted_wetter_overview .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
+            }
+        } elseif (!empty($raw_value)) {
+            $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
+            $inplayscene[$identification] = $value;
+            if (!empty($value)) {
+                eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_overview_scene_fields") . "\";");
             }
         }
-        // ******** ENDE DER ANPASSUNG ********
+    }
+    // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 6. Vorschaufunktion anpassen (`inplayscenes_postbit`)
+#### 6. Anpassung der `inplayscenes_generate_input_field()`
 
 * **Suche:**
     ```php
-	// Hole die Felder aus der Datenbank und füge sie dem $post-Array hinzu
-    $spalten_query = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayscenes_fields ORDER BY disporder ASC, title ASC");
-    while ($spalte = $db->fetch_array($spalten_query)) {
-        $post[$spalte['identification']] = ''; // Füge die Felder mit leerem Wert hinzu
+    case 'select':
+    ```
+* **Füge direkt darunter ein:**
+    ```php
+    // ***** START: MINIMALE ANPASSUNG FÜR WETTER *****
+    $data_attribute = '';
+    if ($identification == 'wetter' && !empty($value)) {
+        $data_attribute = ' data-saved-value=\'' . htmlspecialchars($value, ENT_QUOTES) . '\'';
     }
+    // ***** ENDE DER ANPASSUNG *****
     ```
-
-* **Füge darüber ein:**
-    ```php
-    // *** NEUE VARIABLE FÜR WETTER INITIALISIEREN ***
-    $post['formatted_wetter_field'] = '';
-    ```
-
-#### 5. Editfunktion anpassen (inplayscenes_generate_input_field)
-
-* **Suche**
-
-    ```php
-case 'select':
-    ```
-
-* **Füge direkt darunter ein**
-
-    ```php
-            // ***** START: MINIMALE ANPASSUNG FÜR WETTER *****
-            $data_attribute = '';
-            if ($identification == 'wetter' && !empty($value)) {
-                $data_attribute = ' data-saved-value=\'' . htmlspecialchars($value, ENT_QUOTES) . '\'';
-            }
-            // ***** ENDE DER ANPASSUNG *****
-			
-    ```		
 
 ### Schritt 7: Templates anpassen
 
@@ -809,17 +629,17 @@ Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inp
             if (is_array($wetter_data)) {
                 $wetter_icon_class = htmlspecialchars_uni($wetter_data['icon']);
                 $wetter_display_classes = 'wi ' . $wetter_icon_class;
+                
                 if (strpos($wetter_icon_class, 'wi-from-') === 0 || strpos($wetter_icon_class, 'wi-towards-') === 0) {
                     $wetter_display_classes = 'wi wi-wind ' . $wetter_icon_class;
                 }
+                $wetter_display_classes .= $wetter_icon_class;
+                
+                // Das HTML für die Anzeige zusammenbauen
                 $wetter_icon_html = '<i class="' . $wetter_display_classes . ' wetter-icon-frontend-gross" title="' . $wetter_icon_class . '"></i>';
+                $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
                 
-                $mond_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['mondphase']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['mondphase']) . '"></i>';
-                $wind_icon_html = '<i class="wi wi-wind ' . htmlspecialchars_uni($wetter_data['windrichtung']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['windrichtung']) . '"></i>';
-                $wind_text = htmlspecialchars_uni($wetter_data['windstaerke']) . ' km/h';
-
-                $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']) . " | Mond: " . $mond_icon_html . " | Wind: " . $wind_icon_html . " " . $wind_text;
-                
+                // Das Template `inplayscenes_postbit_fields` für die Ausgabe nutzen
                 eval("\$post['formatted_wetter_field'] .= \"" . $templates->get("inplayscenes_postbit_fields") . "\";");
             }
         } elseif (!empty($raw_value)) {
@@ -840,5 +660,3 @@ Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inp
     }
     // *** ENDE DER SCHLEIFE ***
     ```
-
----
