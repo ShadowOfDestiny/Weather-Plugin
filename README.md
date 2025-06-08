@@ -438,7 +438,7 @@ $headerinclude .= $javascript_for_weather;
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-####  2. Anpassung der inplayscenes_editpost() in inplayscenes_misc()
+####  2. Anpassung der `inplayscenes_editpost()` in `inplayscenes_misc()`
 
 * **Suche**
     ```php
@@ -526,8 +526,77 @@ EOT;
         $headerinclude .= $javascript_for_weather;
         // ******** ENDE DES HINZUGEFÜGTEN BLOCKS ********
     ```
+	
+####  3. Anpassung der Übersicht der eigenen Szenen `if($mybb->input['action'] == "inplayscenes"){` in `inplayscenes_misc()`
 
-#### 3. Funktion `inplayscenes_forumdisplay_thread()` anpassen
+* **Suche**
+    ```php
+                $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+            
+                $inplayscenesfields = "";
+                while ($field = $db->fetch_array($fields_query)) {
+
+                    // Leer laufen lassen
+                    $identification = "";
+                    $title = "";
+                    $value = "";
+                    $allow_html = "";
+                    $allow_mybb = "";
+                    $allow_img = "";
+                    $allow_video = "";
+            
+                    // Mit Infos füllen
+                    $identification = $field['identification'];
+                    $title = $field['title'];
+                    $allow_html = $field['allow_html'];
+                    $allow_mybb = $field['allow_mybb'];
+                    $allow_img = $field['allow_img'];
+                    $allow_video = $field['allow_video'];
+
+                    $value = inplayscenes_parser_fields($scene[$identification], $allow_html, $allow_mybb, $allow_img, $allow_video);
+            
+                    // Einzelne Variabeln
+                    $inplayscene[$identification] = $value;
+            
+                    if (!empty($value)) {
+                        eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
+                    }
+                }
+    ```
+
+* **Ersetze**
+
+    ```php
+                // ******** START DER ANPASSUNG ********
+                $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
+                $inplayscenesfields = "";
+                $formatted_wetter_user_scene = ""; // Neue Variable
+
+                while ($field = $db->fetch_array($fields_query)) {
+                    $identification = $field['identification'];
+                    $title = htmlspecialchars_uni($field['title']);
+                    $raw_value = isset($scene[$identification]) ? $scene[$identification] : '';
+
+                    if ($identification == 'wetter' && !empty($raw_value)) {
+                        // Wetter-Feld speziell behandeln
+                        $wetter_data = json_decode($raw_value, true);
+                        if (is_array($wetter_data)) {
+                             $wetter_icon_html = '<i class="wi ' . htmlspecialchars_uni($wetter_data['icon']) . ' wetter-icon-frontend-gross" title="' . htmlspecialchars_uni($wetter_data['icon']) . '"></i>';
+                             $value = $wetter_icon_html . ' ' . htmlspecialchars_uni($wetter_data['wetterlage']) . ' (' . htmlspecialchars_uni($wetter_data['temperatur']) . '°C) in ' . htmlspecialchars_uni($wetter_data['stadt']);
+                             eval("\$formatted_wetter_user_scene .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
+                        }
+                    } elseif (!empty($raw_value)) {
+                        // Andere Felder normal verarbeiten
+                        $value = inplayscenes_parser_fields($raw_value, $field['allow_html'], $field['allow_mybb'], $field['allow_img'], $field['allow_video']);
+                        $inplayscene[$identification] = $value;
+                        eval("\$inplayscenesfields .= \"" . $templates->get("inplayscenes_user_scene_fields") . "\";");
+                    }
+                }
+                // ******** ENDE DER ANPASSUNG ********
+    ```
+	
+
+#### 4. Funktion `inplayscenes_forumdisplay_thread()` anpassen
 
 * **Suche:**
     ```php
@@ -598,7 +667,7 @@ EOT;
     // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 4. Funktion `inplayscenes_misc()` anpassen
+#### 5. Funktion `inplayscenes_misc()` anpassen
 
 * **Suche:**
     ```php
@@ -663,7 +732,7 @@ EOT;
         // ******** ENDE DER ANPASSUNG ********
     ```
 
-#### 5. Vorschaufunktion anpassen (`inplayscenes_postbit`)
+#### 6. Vorschaufunktion anpassen (`inplayscenes_postbit`)
 
 * **Suche:**
     ```php
@@ -700,16 +769,17 @@ case 'select':
 			
     ```		
 
-### Schritt 6: Templates anpassen
+### Schritt 7: Templates anpassen
 
 Füge die jeweils angegebene Variable in einer neuen Zeile **direkt nach** `{$inplayscenesfields}` in den folgenden Templates ein:
 
 * `inplayscenes_showthread` -> Füge hinzu: `{$formatted_wetter_showthread}`
 * `inplayscenes_forumdisplay` -> Füge hinzu: `{$formatted_wetter_forumdisplay}`
 * `inplayscenes_overview_scene` -> Füge hinzu: `{$formatted_wetter_overview}`
+* `inplayscenes_user_scene_infos` -> Füge hinzu: `{$formatted_wetter_overview}`
 * `inplayscenes_postbit` (falls genutzt) -> Füge hinzu: `{$post['formatted_wetter_field']}`
 
-#### 7. Postbit anpassen (Optional)
+#### 8. Postbit anpassen (Optional)
 
 Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inplayscenes_postbit`), führe auch hier die Änderung durch.
 
@@ -724,7 +794,7 @@ Falls du die Szenen-Informationen auch in jedem einzelnen Beitrag anzeigst (`inp
     ```
 * **Ersetze es mit:**
     ```php
-    // *** START: Diesen Block hast du aus deinem Original-Code gepostet ***
+    // *** START der Anpassung ***
     $fields_query = $db->query("SELECT * FROM " . TABLE_PREFIX . "inplayscenes_fields ORDER BY disporder ASC, title ASC");
 
     $inplayscenesfields = "";
